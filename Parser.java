@@ -2,6 +2,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class Parser {
 
@@ -19,6 +20,8 @@ public class Parser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        LinkedList<Node> ll = new LinkedList<>(g.nodeHashMap.values());
+        g.setNodeList(ll);
         return g;
     }
 

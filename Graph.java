@@ -1,31 +1,34 @@
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Stack;
 
 public class Graph {
 
-    Node[] nodes;
+    LinkedList<Node> nodeList;
     Stack<Integer> actions;
     HashMap<String,Node> nodeHashMap;
+    int totalEdges;
     public Graph(int size){
         nodeHashMap = new HashMap<>();
         actions = new Stack<>();
-    }
-    public void addEdge(int first, int second){
-        // TODO check whether there is already an edge
-
-        nodes[first].addEdge(nodes[second]);
-        nodes[second].addEdge(nodes[first]);
+        totalEdges = 0;
     }
 
     public void addEdge(String first, String second){
         if (!nodeHashMap.containsKey(first)) nodeHashMap.put(first,new Node(first));
         if (!nodeHashMap.containsKey(second)) nodeHashMap.put(second, new Node(second));
-        nodeHashMap.get(first).addEdge(nodeHashMap.get(second));
-        nodeHashMap.get(second).addEdge(nodeHashMap.get(first));
+        addEdge(nodeHashMap.get(first),nodeHashMap.get(second));
     }
 
-    public void removeEdge(int first, int second){
-        removeEdge(nodes[first],nodes[second]);
+    public void addEdge(Node first, Node second){
+        first.addEdge(second);
+        second.addEdge(first);
+        totalEdges++;
+    }
+
+    public void addNode(String name){
+        Node n = new Node(name);
+        nodeList.add(n);
     }
 
     public void removeEdge(String first, String second){
@@ -35,10 +38,6 @@ public class Graph {
     public void removeEdge(Node first, Node second){
         first.deleteEdge(second);
         second.deleteEdge(first);
-    }
-
-    public void removeNode(int num){
-        removeNode(nodes[num]);
     }
 
     public void removeNode(String key){
@@ -52,4 +51,7 @@ public class Graph {
         }
     }
 
+    public void setNodeList(LinkedList<Node> nodeList) {
+        this.nodeList = nodeList;
+    }
 }
