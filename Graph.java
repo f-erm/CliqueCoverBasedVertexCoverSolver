@@ -44,12 +44,23 @@ public class Graph {
         removeNode(nodeHashMap.get(key));
     }
 
+    // this function does not actually delete a node but only removes the node from the list and all the pointers from the neighbours in the list to u.
     public void removeNode(Node toRemove){
         for (Node node : toRemove.neighbors){
             node.deleteEdge(toRemove);
-            toRemove.deleteEdge(node);
+            totalEdges --;
+        }
+        nodeList.remove(toRemove);
+    }
+
+    public void reeaddNode(Node toAdd){
+        nodeList.add(toAdd);
+        for (Node node : toAdd.neighbors){
+            node.neighbors.add(toAdd);
+            totalEdges ++;
         }
     }
+
 
     public void setNodeList(LinkedList<Node> nodeList) {
         this.nodeList = nodeList;
