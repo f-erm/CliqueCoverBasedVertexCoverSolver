@@ -14,11 +14,10 @@ public class Node {
 	public void addEdge(Node to) {
 		neighbors.add(to);
 	}
+
+	public boolean deleteEdge(Node node){
+		return neighbors.remove(node);
+	}
 }
 
 
-class Main {
-    public static void main(String[] args) {
-		System.out.println("Hello, World!"); 
-    }
-}
