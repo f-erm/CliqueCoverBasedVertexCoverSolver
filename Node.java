@@ -3,11 +3,11 @@ import java.util.List;
 
 public class Node {
 	
-	int value;
+	String name;
 	List<Node> neighbors;
 
-	public Node(int value) {
-		this.value = value;
+	public Node(String name) {
+		this.name = name;
 		neighbors = new ArrayList<>();
 	}
 	

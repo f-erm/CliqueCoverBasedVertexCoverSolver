@@ -18,8 +18,8 @@ public class Graph {
     }
 
     public void addEdge(String first, String second){
-        if (!nodeHashMap.containsKey(first)) nodeHashMap.put(first,new Node(1));
-        if (!nodeHashMap.containsKey(second)) nodeHashMap.put(second, new Node(2));
+        if (!nodeHashMap.containsKey(first)) nodeHashMap.put(first,new Node(first));
+        if (!nodeHashMap.containsKey(second)) nodeHashMap.put(second, new Node(second));
         nodeHashMap.get(first).addEdge(nodeHashMap.get(second));
         nodeHashMap.get(second).addEdge(nodeHashMap.get(first));
     }
