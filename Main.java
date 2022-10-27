@@ -6,9 +6,11 @@ public class Main {
     public static void main(String[] args) {
         long startTime = System.nanoTime();
         Graph G = Parser.parseGraph();
+        Algorithms a = new Algorithms();
         System.out.println("#parsen works, it took "+ ((System.nanoTime()-startTime)/1000000)+ " ms");
-        LinkedList<Node> vc = Algorithms.vc(G);
+        LinkedList<Node> vc = a.vc(G);
         System.out.println("#the vertex cover is: ");
+        System.out.println("#recursive steps: " + a.recursiveSteps);
         for (Node node: vc) {
             System.out.println(node.name);
         }

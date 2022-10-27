@@ -2,7 +2,13 @@ import java.util.LinkedList;
 
 public class Algorithms {
 
-    public static LinkedList<Node> vc(Graph G) {
+    int recursiveSteps;
+
+    public Algorithms(){
+        recursiveSteps = 0;
+    }
+
+    public LinkedList<Node> vc(Graph G) {
         int k = 0;
         while (true) {
             System.out.println("# k is " + k);
@@ -13,7 +19,7 @@ public class Algorithms {
     }
 
 
-    private static LinkedList<Node> vc_branch_edges(Graph G, int k){
+    private LinkedList<Node> vc_branch_edges(Graph G, int k){
         if (k < 0 ) return null;
         if (G.totalEdges == 0) {
             return new LinkedList<Node>();
@@ -28,6 +34,7 @@ public class Algorithms {
         G.removeNode(u);
         // S is the vertex cover
         LinkedList<Node> S =  vc_branch_edges(G, k-1);
+        recursiveSteps++;
         G.reeaddNode(u);
         if (S != null) {
             S.add(u);
@@ -36,6 +43,7 @@ public class Algorithms {
         G.removeNode(v);
         // S is the vertex cover
         S =  vc_branch_edges(G, k-1);
+        recursiveSteps++;
         G.reeaddNode(v);
         if (S != null) {
             S.add(v);
@@ -43,7 +51,7 @@ public class Algorithms {
         }
         return null;
     }
-    private static LinkedList<Node> vc_branch_nodes(Graph G, int k){
+    private LinkedList<Node> vc_branch_nodes(Graph G, int k){
         if (k < 0 ) return null;
         if (G.totalEdges == 0) {
             return new LinkedList<Node>();
@@ -63,6 +71,7 @@ public class Algorithms {
         }
         // S is the vertex cover
         LinkedList<Node> S = vc_branch_edges(G, k - numberOfNeighbours);
+        recursiveSteps++;
         for (Node u: neighbours) {
             G.reeaddNode(u);
         }
@@ -75,6 +84,7 @@ public class Algorithms {
         G.removeNode(v);
         // S is the vertex cover
         S = vc_branch_edges(G, k - 1);
+        recursiveSteps++;
         G.reeaddNode(v);
         if (S != null) {
             S.add(v);
