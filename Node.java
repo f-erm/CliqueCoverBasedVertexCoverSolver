@@ -1,14 +1,15 @@
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Node {
 	
 	String name;
-	List<Node> neighbors;
+	LinkedList<Node> neighbors;
 
 	public Node(String name) {
 		this.name = name;
-		neighbors = new ArrayList<>();
+		neighbors = new LinkedList<>();
 	}
 	
 	public void addEdge(Node to) {

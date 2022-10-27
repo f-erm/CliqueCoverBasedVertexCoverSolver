@@ -43,4 +43,44 @@ public class Algorithms {
         }
         return null;
     }
+    private static LinkedList<Node> vc_branch_nodes(Graph G, int k){
+        if (k < 0 ) return null;
+        if (G.totalEdges == 0) {
+            return new LinkedList<Node>();
+        }
+        Node v = null;
+        LinkedList<Node> neighbours = null;
+        int numberOfNeighbours = 0;
+        for (Node myNode: G.nodeList) {
+            if (myNode.neighbors.isEmpty()) continue;
+            v = myNode;
+            neighbours = myNode.neighbors;
+            numberOfNeighbours = neighbours.size();
+            break;
+        }
+        for (Node u: neighbours) {
+            G.removeNode(u);
+        }
+        // S is the vertex cover
+        LinkedList<Node> S = vc_branch_edges(G, k - numberOfNeighbours);
+        for (Node u: neighbours) {
+            G.reeaddNode(u);
+        }
+        if (S != null) {
+            for (Node u: neighbours) {
+                S.add(u);
+            }
+            return S;
+        }
+        G.removeNode(v);
+        // S is the vertex cover
+        S = vc_branch_edges(G, k - 1);
+        G.reeaddNode(v);
+        if (S != null) {
+            S.add(v);
+            return S;
+        }
+        return null;
+    }
+
 }
