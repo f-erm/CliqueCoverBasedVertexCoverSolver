@@ -57,30 +57,34 @@ public class Algorithms {
             return new LinkedList<Node>();
         }
         Node v = null;
+        LinkedList<Node> S;
         LinkedList<Node> neighbours = null;
         int numberOfNeighbours = 0;
         for (Node myNode: G.nodeList) {
             if (myNode.neighbors.isEmpty()) continue;
             v = myNode;
-            neighbours = myNode.neighbors;
+            neighbours = (LinkedList<Node>) myNode.neighbors.clone();
             numberOfNeighbours = neighbours.size();
             break;
         }
-        for (Node u: neighbours) {
-            G.removeNode(u);
-        }
-        // S is the vertex cover
-        LinkedList<Node> S = vc_branch_edges(G, k - numberOfNeighbours);
-        recursiveSteps++;
-        for (Node u: neighbours) {
-            G.reeaddNode(u);
-        }
-        if (S != null) {
+        if (k >= numberOfNeighbours){
             for (Node u: neighbours) {
-                S.add(u);
+                G.removeNode(u);
             }
-            return S;
+            // S is the vertex cover
+            S = vc_branch_edges(G, k - numberOfNeighbours);
+            recursiveSteps++;
+            for (Node u: neighbours) {
+                G.reeaddNode(u);
+            }
+            if (S != null) {
+                for (Node u: neighbours) {
+                    S.add(u);
+                }
+                return S;
+            }
         }
+
         G.removeNode(v);
         // S is the vertex cover
         S = vc_branch_edges(G, k - 1);
@@ -92,5 +96,4 @@ public class Algorithms {
         }
         return null;
     }
-
 }
