@@ -1,3 +1,4 @@
+import java.util.Collections;
 import java.util.LinkedList;
 
 public class Algorithms {
@@ -12,7 +13,7 @@ public class Algorithms {
         int k = 0;
         while (true) {
             System.out.println("# k is " + k);
-            LinkedList<Node> S = vc_branch_edges(G, k);
+            LinkedList<Node> S = vc_branch_nodes(G, k);
             if (S != null) return S;
             k++;
         }
@@ -58,23 +59,24 @@ public class Algorithms {
         }
         Node v = null;
         LinkedList<Node> S;
-        LinkedList<Node> neighbours = null;
+        LinkedList<Node> neighbours = new LinkedList<>();
         int numberOfNeighbours = 0;
         for (Node myNode: G.nodeList) {
             if (myNode.neighbors.isEmpty()) continue;
             v = myNode;
-            neighbours = (LinkedList<Node>) myNode.neighbors.clone();
-            numberOfNeighbours = neighbours.size();
             break;
         }
-        if (k >= numberOfNeighbours){
+        if (k >= v.neighbors.size()){
+            neighbours.addAll(v.neighbors);
+            numberOfNeighbours = neighbours.size();
             for (Node u: neighbours) {
                 G.removeNode(u);
             }
             // S is the vertex cover
-            S = vc_branch_edges(G, k - numberOfNeighbours);
+            S = vc_branch_nodes(G, k - numberOfNeighbours);
             recursiveSteps++;
-            for (Node u: neighbours) {
+            Collections.reverse(neighbours);
+            for (Node u : neighbours) {
                 G.reeaddNode(u);
             }
             if (S != null) {
@@ -87,7 +89,7 @@ public class Algorithms {
 
         G.removeNode(v);
         // S is the vertex cover
-        S = vc_branch_edges(G, k - 1);
+        S = vc_branch_nodes(G, k - 1);
         recursiveSteps++;
         G.reeaddNode(v);
         if (S != null) {
