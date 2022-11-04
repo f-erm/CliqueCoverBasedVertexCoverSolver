@@ -73,4 +73,22 @@ public class Graph {
     public void setNodeList(LinkedList<Node> nodeList) {
         this.nodeList = nodeList;
     }
+
+    public LinkedList<Node> removeDegreeOne(){
+        Boolean changed = true;
+        LinkedList<Node> solution = new LinkedList<>();
+        while (changed){
+            changed = false;
+            for (Node node: this.nodeList) {
+                if(node.neighbors.size()==1){
+                    solution.add(node.neighbors.get(0));
+                    this.removeNode(node.neighbors.get(0));
+                    this.removeNode(node);
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        return solution;
+    }
 }

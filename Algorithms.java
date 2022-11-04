@@ -11,13 +11,29 @@ public class Algorithms {
 
     public LinkedList<Node> vc(Graph G) {
         int k = 0;
+        LinkedList<Node> partialVC = G.removeDegreeOne();
         while (true) {
             System.out.println("# k is " + k);
-            LinkedList<Node> S = vc_branch_nodes(G, k);
-            if (S != null) return S;
+            LinkedList<Node> S = vc_branch_nodes(G, k-partialVC.size());
+            if (S != null) {
+                S.addAll(partialVC);
+                return S;
+            }
             k++;
         }
     }
+
+    /*public LinkedList<Node> vc(Graph G) {
+        int k = 0;
+        while (true) {
+            System.out.println("# k is " + k);
+            LinkedList<Node> S = vc_branch_nodes(G, k);
+            if (S != null) {
+                return S;
+            }
+            k++;
+        }
+    }*/
 
 
     private LinkedList<Node> vc_branch_edges(Graph G, int k){
