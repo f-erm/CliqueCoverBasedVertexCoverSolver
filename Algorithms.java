@@ -64,6 +64,10 @@ public class Algorithms {
         for (Node myNode: G.nodeList) {
             if (myNode.neighbors.isEmpty()) continue;
             v = myNode;
+            if (v.neighbors.size() < 3){
+                Collections.sort(G.nodeList);
+                if (G.nodeList.getFirst().neighbors.size() < 3) return solveSimpleGraph(G, k);
+            }
             break;
         }
         if (k >= v.neighbors.size()){
@@ -97,5 +101,33 @@ public class Algorithms {
             return S;
         }
         return null;
+    }
+    public LinkedList<Node> solveSimpleGraph(Graph G, int k){
+        if (k < 0) return null;
+        for (Node node : G.nodeList){
+            if (node.neighbors.size() > 1){
+                G.removeNode(node);
+                LinkedList<Node> S = solveSimpleGraph(G, k - 1);
+                recursiveSteps++;
+                G.reeaddNode(node);
+                if (S != null){
+                    S.add(node);
+                }
+                return S;
+            }
+        }
+        for (Node node : G.nodeList){
+            if (node.neighbors.size() > 0){
+                G.removeNode(node);
+                LinkedList<Node> S = solveSimpleGraph(G, k - 1);
+                recursiveSteps++;
+                G.reeaddNode(node);
+                if (S != null){
+                    S.add(node);
+                }
+                return S;
+            }
+        }
+        return new LinkedList<Node>();
     }
 }

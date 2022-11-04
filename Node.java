@@ -1,8 +1,6 @@
-import java.util.ArrayList;
 import java.util.LinkedList;
-import java.util.List;
 
-public class Node {
+public class Node implements Comparable<Node> {
 	
 	String name;
 	LinkedList<Node> neighbors;
@@ -18,6 +16,11 @@ public class Node {
 
 	public boolean deleteEdge(Node node){
 		return neighbors.remove(node);
+	}
+
+	@Override
+	public int compareTo(Node o) {
+		return Integer.compare(o.neighbors.size(),this.neighbors.size());
 	}
 }
 

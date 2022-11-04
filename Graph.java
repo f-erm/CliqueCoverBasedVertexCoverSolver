@@ -7,18 +7,26 @@ public class Graph {
     LinkedList<Node> nodeList;
     Stack<Integer> actions;
     HashMap<String,Node> nodeHashMap;
+
     int totalEdges;
+    int maxNodeDegree;
     public Graph(int size){
         nodeHashMap = new HashMap<>();
         actions = new Stack<>();
         totalEdges = 0;
+        maxNodeDegree = 0;
     }
 
     public void addEdge(String first, String second){
-        if (!nodeHashMap.containsKey(first)) nodeHashMap.put(first,new Node(first));
-        if (!nodeHashMap.containsKey(second)) nodeHashMap.put(second, new Node(second));
-        addEdge(nodeHashMap.get(first),nodeHashMap.get(second));
+
+        Node firstNode = nodeHashMap.get(first);
+        if (firstNode == null) nodeHashMap.put(first, firstNode = new Node(first));
+        Node secondNode = nodeHashMap.get(second);
+        if (secondNode == null) nodeHashMap.put(second, secondNode = new Node(second));
+        addEdge(firstNode, secondNode);
+
     }
+
 
     public void addEdge(Node first, Node second){
         first.addEdge(second);
