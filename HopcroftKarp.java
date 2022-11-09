@@ -92,7 +92,7 @@ public class HopcroftKarp {
             for (int[] neighbourInfo : u.neighbours){
                 Node v = B.nodeArray[neighbourInfo[0]];
                 if (dist[pair[v.id]] == dist[u.id] + 1 && v.active){
-                    if (dfs(B.nodeArray[pair[neighbourInfo[0]]])){
+                    if (dfs(B.nodeArray[pair[v.id]])){
                         pair[v.id] = u.id;
                         pair[u.id] = v.id;
                         return true;
@@ -133,7 +133,7 @@ public class HopcroftKarp {
             } else dist[u] = Integer.MAX_VALUE;
         }
         if (bfsIteration()){
-            for (int i = 0; i < size; i++){
+            for (int i = 0; i <= nil; i++){
                 if (pair[i] == nil && B.nodeArray[i].active){
                     if (dfs(B.nodeArray[i])) {
                         matching++;
