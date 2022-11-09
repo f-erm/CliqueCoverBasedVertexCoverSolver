@@ -4,10 +4,15 @@ public class Node implements Comparable<Node> {
 	
 	String name;
 	LinkedList<Node> neighbors;
+	boolean active;
+
+	int id;
 
 	public Node(String name) {
 		this.name = name;
 		neighbors = new LinkedList<>();
+		this.id = 0;
+		active = true;
 	}
 	
 	public void addEdge(Node to) {
