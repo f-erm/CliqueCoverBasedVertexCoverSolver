@@ -18,7 +18,7 @@ public class Algorithms {
         k = hk.matching/2 + partialVC.size();
         while (true) {
             System.out.println("# k is " + k);
-            System.out.println(recursiveSteps);
+            //System.out.println(recursiveSteps);
             hk = new HopcroftKarp(G);
             LinkedList<Node> S = vc_branch_nodes(G, k-partialVC.size());
             if (S != null) {
