@@ -1,11 +1,10 @@
-import java.util.InputMismatchException;
 import java.util.LinkedList;
-import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
         long startTime = System.nanoTime();
-        Graph G = Parser.parseGraph();
+        Graph G = Parser.parseGraph("../Algorithm Engineering/2-social-networks/04-polbooks.graph.dimacs");
+        //Graph G = Parser.parseGraph();
         Algorithms a = new Algorithms();
         System.out.println("#parsen works, it took "+ ((System.nanoTime()-startTime)/1000000)+ " ms");
         LinkedList<Node> vc = a.vc(G);
@@ -16,4 +15,5 @@ public class Main {
         }
         System.out.println("#it took "+ ((System.nanoTime()-startTime)/1000000) + " ms");
     }
+
 }

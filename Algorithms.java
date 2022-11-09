@@ -1,5 +1,5 @@
+import sun.awt.image.ImageWatched;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 
@@ -14,14 +14,14 @@ public class Algorithms {
 
     public LinkedList<Node> vc(Graph G) {
         int k = 0;
-        //hk = new HopcroftKarp(G);
-        //k = hk.matching/2 + partialVC.size();
+        hk = new HopcroftKarp(G);
+        k = hk.matching/2 + G.partialSolution.size();
         while (true) {
             System.out.println("# k is " + k);
             //System.out.println(recursiveSteps);
-            //hk = new HopcroftKarp(G);
+            hk = new HopcroftKarp(G);
             //LinkedList<OldNode> S = vc_branch_nodes(G, k-partialVC.size());
-            LinkedList<Node> S = vc_branch_nodes(G, k-G.partialSolution.size());
+            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size());
             if (S != null) {
                 S.addAll(G.partialSolution);
                 return S;
@@ -49,12 +49,14 @@ public class Algorithms {
         if (G.totalEdges == 0) {
             return new LinkedList<>();
         }
-        //HopcroftKarp a = new HopcroftKarp(G);
-        /*a.updateDelete(0);
-        a.updateDelete(2);
-        a.updateAdd(2);
-        a.updateAdd(0);*/
-        //if (k < hk.matching/2) return null;
+        HopcroftKarp a = new HopcroftKarp(G);
+        LinkedList<Node> linkedList = new LinkedList<>();
+        linkedList.add(G.nodeArray[0]);
+        linkedList.add(G.nodeArray[2]);
+        linkedList.add(G.nodeArray[3]);
+        a.updateDeleteNodes(linkedList);
+        a.updateAddNodes(linkedList);
+        if (k < hk.matching/2) return null;
         Node v = null;
         LinkedList<Node> S;
         LinkedList<Node> neighbours = new LinkedList<>();
@@ -83,7 +85,7 @@ public class Algorithms {
                 }
             }
             numberOfNeighbours = neighbours.size();
-            //hk.updateDeleteNodes(neighbours);
+            hk.updateDeleteNodes(neighbours);
             // S is the vertex cover
             S = vc_branch_nodes(G, k - numberOfNeighbours);
             recursiveSteps++;
@@ -91,7 +93,7 @@ public class Algorithms {
             for (Node u : neighbours) {
                 G.reeaddNode(u);
             }
-            //hk.updateAddNodes(neighbours);
+            hk.updateAddNodes(neighbours);
             if (S != null) {
                 for (Node u: neighbours) {
                     S.add(u);
@@ -103,12 +105,12 @@ public class Algorithms {
         G.removeNode(v);
         LinkedList<Node> ll = new LinkedList<>();
         ll.add(v);
-        //hk.updateDeleteNodes(ll);
+        hk.updateDeleteNodes(ll);
         // S is the vertex cover
         S = vc_branch_nodes(G, k - 1);
         recursiveSteps++;
         G.reeaddNode(v);
-        //hk.updateAddNodes(ll);
+        hk.updateAddNodes(ll);
         if (S != null) {
             S.add(v);
             return S;
