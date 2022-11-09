@@ -4,13 +4,15 @@ import java.util.Stack;
 
 public class Graph {
 
-    LinkedList<Node> nodeList;
+    LinkedList<OldNode> oldNodeList;
+    //LinkedList<Node> nodeList;
+    Node[] nodeArray;
     Stack<Integer> actions;
-    HashMap<String,Node> nodeHashMap;
+    HashMap<String, OldNode> nodeHashMap;
 
     int totalEdges;
     int maxNodeDegree;
-    public Graph(int size){
+    public Graph(){
         nodeHashMap = new HashMap<>();
         actions = new Stack<>();
         totalEdges = 0;
@@ -19,71 +21,75 @@ public class Graph {
 
     public void addEdge(String first, String second){
 
-        Node firstNode = nodeHashMap.get(first);
-        if (firstNode == null) nodeHashMap.put(first, firstNode = new Node(first));
-        Node secondNode = nodeHashMap.get(second);
-        if (secondNode == null) nodeHashMap.put(second, secondNode = new Node(second));
-        addEdge(firstNode, secondNode);
+        OldNode firstOldNode = nodeHashMap.get(first);
+        if (firstOldNode == null) nodeHashMap.put(first, firstOldNode = new OldNode(first));
+        OldNode secondOldNode = nodeHashMap.get(second);
+        if (secondOldNode == null) nodeHashMap.put(second, secondOldNode = new OldNode(second));
+        addEdge(firstOldNode, secondOldNode);
 
     }
 
 
-    public void addEdge(Node first, Node second){
+    public void addEdge(OldNode first, OldNode second){
         first.addEdge(second);
         second.addEdge(first);
         totalEdges++;
     }
 
-    public void addNode(String name){
-        Node n = new Node(name);
-        nodeList.add(n);
-    }
-
-    public void removeEdge(String first, String second){
-        removeEdge(nodeHashMap.get(first),nodeHashMap.get(second));
-    }
-
-    public void removeEdge(Node first, Node second){
+    public void removeEdge(OldNode first, OldNode second){
         first.deleteEdge(second);
         second.deleteEdge(first);
     }
 
-    public void removeNode(String key){
-        removeNode(nodeHashMap.get(key));
+    public void removeNode(Node n){
+        n.active = false;
+        for (int i = 0; i < n.neighbours.length; i++){
+            nodeArray[n.neighbours[i][0]].activeNeighbours--;
+        }
+        totalEdges = totalEdges - n.activeNeighbours;
     }
+
+    public void reeaddNode(Node n){
+        n.active = true;
+        for (int i = 0; i < n.neighbours.length; i++){
+            nodeArray[n.neighbours[i][0]].activeNeighbours++;
+        }
+        totalEdges += n.activeNeighbours;
+    }
+
 
     // this function does not actually delete a node but only removes the node from the list and all the pointers from the neighbours in the list to u.
-    public void removeNode(Node toRemove){
-        for (Node node : toRemove.neighbors){
-            node.deleteEdge(toRemove);
+    public void removeNode(OldNode toRemove){
+        for (OldNode oldNode : toRemove.neighbors){
+            oldNode.deleteEdge(toRemove);
             totalEdges --;
         }
-        nodeList.remove(toRemove);
+        oldNodeList.remove(toRemove);
     }
 
-    public void reeaddNode(Node toAdd){
-        nodeList.add(toAdd);
-        for (Node node : toAdd.neighbors){
-            node.neighbors.add(toAdd);
+    public void reeaddNode(OldNode toAdd){
+        oldNodeList.add(toAdd);
+        for (OldNode oldNode : toAdd.neighbors){
+            oldNode.neighbors.add(toAdd);
             totalEdges ++;
         }
     }
 
 
-    public void setNodeList(LinkedList<Node> nodeList) {
-        this.nodeList = nodeList;
+    public void setNodeList(LinkedList<OldNode> oldNodeList) {
+        this.oldNodeList = oldNodeList;
     }
 
-    public LinkedList<Node> removeDegreeOne(){
+    public LinkedList<OldNode> removeDegreeOne(){
         Boolean changed = true;
-        LinkedList<Node> solution = new LinkedList<>();
+        LinkedList<OldNode> solution = new LinkedList<>();
         while (changed){
             changed = false;
-            for (Node node: this.nodeList) {
-                if(node.neighbors.size()==1){
-                    solution.add(node.neighbors.get(0));
-                    this.removeNode(node.neighbors.get(0));
-                    this.removeNode(node);
+            for (OldNode oldNode : this.oldNodeList) {
+                if(oldNode.neighbors.size()==1){
+                    solution.add(oldNode.neighbors.get(0));
+                    this.removeNode(oldNode.neighbors.get(0));
+                    this.removeNode(oldNode);
                     changed = true;
                     break;
                 }

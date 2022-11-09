@@ -6,7 +6,7 @@ import java.util.*;
 public class Parser {
 
     public static Graph parseGraph(String pathname){
-        Graph g = new Graph(6200);
+        Graph g = new Graph();
         try (BufferedReader br = new BufferedReader(new FileReader(pathname))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -19,13 +19,24 @@ public class Parser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        LinkedList<Node> ll = new LinkedList<>(g.nodeHashMap.values());
+        LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
         Collections.sort(ll);
         g.setNodeList(ll);
+        g.nodeArray = new Node[g.oldNodeList.size()];
+        int j = 0;
+        for (OldNode oldNode : ll){
+            oldNode.id = j++;
+        }
+        int i = 0;
+        for (OldNode oldNode : ll){
+            oldNode.id = i;
+            Node n = new Node(oldNode);
+            g.nodeArray[i++] = n;
+        }
         return g;
     }
     public static Graph parseGraph(){
-        Graph g = new Graph(6200);
+        Graph g = new Graph();
         Scanner scanner = new Scanner(System.in);
         String line;
         while (scanner.hasNext()){
@@ -36,9 +47,20 @@ public class Parser {
 
             g.addEdge(nodes[0], nodes[1]);
         }
-        LinkedList<Node> ll = new LinkedList<>(g.nodeHashMap.values());
+        LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
         Collections.sort(ll);
         g.setNodeList(ll);
+        g.nodeArray = new Node[g.oldNodeList.size()];
+        int j = 0;
+        for (OldNode oldNode : ll){
+            oldNode.id = j++;
+        }
+        int i = 0;
+        for (OldNode oldNode : ll){
+            oldNode.id = i;
+            Node n = new Node(oldNode);
+            g.nodeArray[i++] = n;
+        }
         return g;
 
     }
