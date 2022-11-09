@@ -17,6 +17,12 @@ public class Node implements Comparable<Node>{
             neighbours[i++][1] = n.neighbors.indexOf(oldNode);
         }
     }
+    public Node (String name, int id, int size){
+        this.name = name;
+        active = true;
+        this.id = id;
+        this.neighbours = new int[size][2];
+    }
 
 
     @Override
