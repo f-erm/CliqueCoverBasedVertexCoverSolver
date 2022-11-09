@@ -10,6 +10,7 @@ public class Graph {
     Stack<Integer> actions;
     HashMap<String, OldNode> nodeHashMap;
 
+    LinkedList<Node> partialSolution;
     int totalEdges;
     int maxNodeDegree;
     public Graph(){
@@ -73,6 +74,10 @@ public class Graph {
             oldNode.neighbors.add(toAdd);
             totalEdges ++;
         }
+    }
+
+    public void setPartialSolution(LinkedList<Node> partialSolution){
+        this.partialSolution = partialSolution;
     }
 
 

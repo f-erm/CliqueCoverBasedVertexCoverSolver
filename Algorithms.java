@@ -14,7 +14,6 @@ public class Algorithms {
 
     public LinkedList<Node> vc(Graph G) {
         int k = 0;
-        //LinkedList<OldNode> partialVC = G.removeDegreeOne();
         //hk = new HopcroftKarp(G);
         //k = hk.matching/2 + partialVC.size();
         while (true) {
@@ -22,9 +21,9 @@ public class Algorithms {
             //System.out.println(recursiveSteps);
             //hk = new HopcroftKarp(G);
             //LinkedList<OldNode> S = vc_branch_nodes(G, k-partialVC.size());
-            LinkedList<Node> S = vc_branch_nodes(G, k);
+            LinkedList<Node> S = vc_branch_nodes(G, k-G.partialSolution.size());
             if (S != null) {
-                //S.addAll(partialVC);
+                S.addAll(G.partialSolution);
                 return S;
             }
             k++;
