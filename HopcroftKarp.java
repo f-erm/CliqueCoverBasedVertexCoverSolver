@@ -10,9 +10,11 @@ public class HopcroftKarp {
     int[] pair;
     int[] dist;
     int matching;
+    int lastLowerBound;
     Queue<Node> Q;
     Stack<int[]> states;
     Stack<Integer> numMatching;
+    Stack<Integer> numLastLowerBound;
     Stack<int[]> dists;
     public HopcroftKarp(Graph G){
         B = new Graph();
@@ -43,6 +45,7 @@ public class HopcroftKarp {
         }
         states = new Stack<>();
         dists = new Stack<>();
+        numLastLowerBound = new Stack<>();
         numMatching = new Stack<>(); //save all changes for efficient readding
         pair = new int[size * 2 + 1];
         for (int j = 0; j <= nil; j++){
@@ -59,6 +62,7 @@ public class HopcroftKarp {
                 }
             }
         }
+        lastLowerBound = matching/2;
     }
      boolean bfs(){
         Q = new LinkedList<>();
@@ -109,6 +113,7 @@ public class HopcroftKarp {
         states.push(pair.clone());
         dists.push(dist.clone());
         numMatching.push(matching);
+        numLastLowerBound.push(lastLowerBound);
         for (Node node : nodes){
             Node partnerV = B.nodeArray[pair[node.id]];
             Node partnerU = B.nodeArray[pair[node.id + size]];
@@ -126,21 +131,21 @@ public class HopcroftKarp {
         }
         dist[size * 2] = Integer.MAX_VALUE;
         //System.out.println(System.nanoTime() - time);
-        for (int u = 0; u < size; u++) {
+        /*for (int u = 0; u < size; u++) {
             if (pair[u] == nil && B.nodeArray[u].active) {
                 dist[u] = 0;
                 Q.add(B.nodeArray[u]);
             } else dist[u] = Integer.MAX_VALUE;
         }
         if (bfsIteration()){
-            for (int i = 0; i <= nil; i++){
+            for (int i = 0; i < size; i++){
                 if (pair[i] == nil && B.nodeArray[i].active){
                     if (dfs(B.nodeArray[i])) {
                         matching++;
                     }
                 }
             }
-        }
+        }*/
         //System.out.println(System.nanoTime() - time);
     }
     public void updateAddNodes(LinkedList<Node> nodes){
@@ -151,6 +156,26 @@ public class HopcroftKarp {
         pair = states.pop();
         matching = numMatching.pop();
         dist = dists.pop();
+        lastLowerBound = numLastLowerBound.pop();
+    }
+
+    public void searchForAMatching(){
+        for (int u = 0; u < size; u++) {
+            if (pair[u] == nil && B.nodeArray[u].active) {
+                dist[u] = 0;
+                Q.add(B.nodeArray[u]);
+            } else dist[u] = Integer.MAX_VALUE;
+        }
+        if (bfsIteration()){
+            for (int i = 0; i < size; i++){
+                if (pair[i] == nil && B.nodeArray[i].active){
+                    if (dfs(B.nodeArray[i])) {
+                        matching++;
+                    }
+                }
+            }
+        }
+        lastLowerBound = matching/2;
     }
 
 }

@@ -7,7 +7,6 @@ public class Algorithms {
 
     int recursiveSteps;
     HopcroftKarp hk;
-
     public Algorithms(){
         recursiveSteps = 0;
     }
@@ -56,7 +55,10 @@ public class Algorithms {
         linkedList.add(G.nodeArray[3]);
         a.updateDeleteNodes(linkedList);
         a.updateAddNodes(linkedList);*/
-        if (k < hk.matching/2) return null;
+        if (k < hk.lastLowerBound){
+            hk.searchForAMatching();
+            if (k < hk.lastLowerBound) return null;
+        }
         Node v = null;
         LinkedList<Node> S;
         LinkedList<Node> neighbours = new LinkedList<>();
