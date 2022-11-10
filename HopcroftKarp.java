@@ -4,10 +4,10 @@ import java.util.Queue;
 import java.util.Stack;
 
 public class HopcroftKarp {
-    Graph B;
-    int size;
-    int nil;
-    int[] pair;
+    Graph B; //bipartite graph
+    int size; //size of one side of the bipartite graph
+    int nil; //size of the bipartite graph and index position of nil node
+    int[] pair; //matching partner of each node
     int[] dist;
     int matching;
     int lastLowerBound;
@@ -16,6 +16,15 @@ public class HopcroftKarp {
     Stack<Integer> numMatching;
     Stack<Integer> numLastLowerBound;
     Stack<int[]> dists;
+
+    /**
+     * Constructs the bipartite graph used for a lower bound of vertex cover and
+     * runs the Hopcroft-Karp Algorithm to find a maximum matching. The
+     * lower bound is saved in lastlowerBound.
+     * @param G input Graph
+     *
+     *
+     */
     public HopcroftKarp(Graph G){
         B = new Graph();
         size = G.nodeArray.length;
@@ -109,6 +118,10 @@ public class HopcroftKarp {
         return true;
     }
 
+    /**
+     * deletes the corresponding nodes from a list of nodes that were deleted in the non-bipartite graph.
+     * @param nodes
+     */
     public void updateDeleteNodes(LinkedList<Node> nodes){
         states.push(pair.clone());
         dists.push(dist.clone());
@@ -125,25 +138,13 @@ public class HopcroftKarp {
             pair[partnerV.id] = nil;
             B.nodeArray[node.id].active = false;
             B.nodeArray[node.id + size].active = false;
-        };
-        //System.out.println(System.nanoTime() - time);
-        /*for (int u = 0; u < size; u++) {
-            if (pair[u] == nil && B.nodeArray[u].active) {
-                dist[u] = 0;
-                Q.add(B.nodeArray[u]);
-            } else dist[u] = Integer.MAX_VALUE;
         }
-        if (bfsIteration()){
-            for (int i = 0; i < size; i++){
-                if (pair[i] == nil && B.nodeArray[i].active){
-                    if (dfs(B.nodeArray[i])) {
-                        matching++;
-                    }
-                }
-            }
-        }*/
-        //System.out.println(System.nanoTime() - time);
     }
+
+    /**
+     * readd previously deleted nodes from a stack.
+     * @param nodes
+     */
     public void updateAddNodes(LinkedList<Node> nodes){
         for (Node node : nodes){
             B.nodeArray[node.id].active = true;
@@ -155,6 +156,9 @@ public class HopcroftKarp {
         lastLowerBound = numLastLowerBound.pop();
     }
 
+    /**
+     * find augmenting path for currently not-matched nodes.
+     */
     public void searchForAMatching(){
         dist[nil] = Integer.MAX_VALUE;
         for (int u = 0; u < size; u++) {
