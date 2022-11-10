@@ -9,14 +9,17 @@ public class Algorithms {
         recursiveSteps = 0;
     }
 
+    /**
+     * increment k until a vertex cover is found.
+     * @param G graph
+     * @return a smallest vertex cover
+     */
     public LinkedList<Node> vc(Graph G) {
-        int k = 0;
         hk = new HopcroftKarp(G);
-        k = hk.matching/2 + G.partialSolution.size();
+        int k = hk.lastLowerBound + G.partialSolution.size();
         while (true) {
             System.out.println("# k is " + k);
             System.out.println(recursiveSteps);
-            hk = new HopcroftKarp(G);
             LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0);
             if (S != null) {
                 S.addAll(G.partialSolution);
@@ -42,10 +45,9 @@ public class Algorithms {
             hk.searchForAMatching();
             if (k < hk.lastLowerBound) return null;
         }
-        Node v = null;
         LinkedList<Node> S;
         LinkedList<Node> neighbours = new LinkedList<>();
-        int numberOfNeighbours = 0;
+        Node v;
         while (true) {
             if (G.nodeArray[firstActiveNode].activeNeighbours == 0 || !G.nodeArray[firstActiveNode].active){
                 firstActiveNode++;
@@ -72,10 +74,9 @@ public class Algorithms {
                     G.removeNode(toDelete);
                 }
             }
-            numberOfNeighbours = neighbours.size();
             hk.updateDeleteNodes(neighbours);
             // S is the vertex cover
-            S = vc_branch_nodes(G, k - numberOfNeighbours, firstActiveNode);
+            S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode);
             recursiveSteps++;
             Collections.reverse(neighbours);
             for (Node u : neighbours) {
@@ -83,9 +84,7 @@ public class Algorithms {
             }
             hk.updateAddNodes(neighbours);
             if (S != null) {
-                for (Node u: neighbours) {
-                    S.add(u);
-                }
+                S.addAll(neighbours);
                 return S;
             }
         }

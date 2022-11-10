@@ -11,7 +11,7 @@ public class OldNode implements Comparable<OldNode> {
 	public OldNode(String name) {
 		this.name = name;
 		neighbors = new LinkedList<>();
-		this.id = -1;
+		this.id = -1; // is assigned later
 		active = true;
 	}
 
@@ -20,8 +20,8 @@ public class OldNode implements Comparable<OldNode> {
 		neighbors.add(to);
 	}
 
-	public boolean deleteEdge(OldNode oldNode){
-		return neighbors.remove(oldNode);
+	public void deleteEdge(OldNode oldNode){
+		 neighbors.remove(oldNode);
 	}
 
 	@Override

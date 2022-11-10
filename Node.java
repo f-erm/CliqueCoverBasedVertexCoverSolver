@@ -5,6 +5,10 @@ public class Node implements Comparable<Node>{
     boolean active;
     int activeNeighbours;
 
+    /**
+     * translates an old node to a new node.
+     * @param oldNode corresponding old node from parsing.
+     */
     public Node(OldNode oldNode){
         name = oldNode.name;
         active = true;
@@ -17,6 +21,13 @@ public class Node implements Comparable<Node>{
             neighbours[i++][1] = n.neighbors.indexOf(oldNode);
         }
     }
+
+    /**
+     * constructs a node independently from the OldNode class.
+     * @param name name of the node
+     * @param id id of the node
+     * @param size size of the neighbour array
+     */
     public Node (String name, int id, int size){
         this.name = name;
         active = true;

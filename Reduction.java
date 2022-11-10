@@ -2,8 +2,13 @@ import java.util.LinkedList;
 
 public class Reduction {
 
+    /**
+     * removes all nodes with degree one and their neighbour iteratively and
+     * sets partialSolution to a list of all neighbours of the degree-one-nodes.
+     * @param G graph
+     */
     public static void removeDegreeOne(Graph G){
-        Boolean changed = true;
+        boolean changed = true;
         LinkedList<OldNode> solution = new LinkedList<>();
         while (changed){
             changed = false;
@@ -18,7 +23,7 @@ public class Reduction {
             }
         }
         int i = 0;
-        LinkedList <Node> goodSolution = new LinkedList<Node>();
+        LinkedList <Node> goodSolution = new LinkedList<>();
         for (OldNode oldNode : solution){
             oldNode.id = i;
             Node n = new Node(oldNode);

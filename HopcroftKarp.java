@@ -1,8 +1,6 @@
-
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
-
 public class HopcroftKarp {
     Graph B; //bipartite graph
     int size; //size of one side of the bipartite graph
@@ -16,7 +14,6 @@ public class HopcroftKarp {
     Stack<Integer> numMatching;
     Stack<Integer> numLastLowerBound;
     Stack<int[]> dists;
-
     /**
      * Constructs the bipartite graph used for a lower bound of vertex cover and
      * runs the Hopcroft-Karp Algorithm to find a maximum matching. The
@@ -32,7 +29,7 @@ public class HopcroftKarp {
         B.nodeArray = new Node[nil + 1];
         Node nilNode = new Node("nil", nil, size); // end node of BFS/DFS
         B.nodeArray[nil] = nilNode;
-        for (Node node : G.nodeArray){
+        for (Node node : G.nodeArray){ //construct bipartite graph
             Node left = new Node(node.name, node.id, node.neighbours.length);
             Node right = new Node(node.name, node.id + size, node.neighbours.length + 1);
             if (!node.active){
@@ -62,17 +59,13 @@ public class HopcroftKarp {
         }
         dist = new int[size * 2 + 1];
         matching = 0;
-        while (bfs()){
-            for (int u = 0; u < size; u++){
-                if (pair[u] == nil){
-                    if (dfs(B.nodeArray[u])){
-                        matching++;
-                    }
-                }
-            }
-        }
-        lastLowerBound = matching/2;
+        searchForAMatching();
     }
+
+    /**
+     * Breadth-first-search.
+     * @return true if a path has been found.
+     */
      boolean bfs(){
         Q = new LinkedList<>();
         for (int u = 0; u < size; u++) {
@@ -81,25 +74,27 @@ public class HopcroftKarp {
                 Q.add(B.nodeArray[u]);
             } else dist[u] = Integer.MAX_VALUE;
         }
-        dist[size * 2] = Integer.MAX_VALUE;
-        bfsIteration();
-        return dist[size * 2] != Integer.MAX_VALUE;
+        dist[nil] = Integer.MAX_VALUE;
+         while (!Q.isEmpty()) {
+             Node u = Q.poll();
+             if (dist[u.id] < dist[nil]) {
+                 for (int[] neighbourInfo : u.neighbours) {
+                     Node v = B.nodeArray[neighbourInfo[0]];
+                     if (dist[pair[v.id]] == Integer.MAX_VALUE && v.active) {
+                         dist[pair[v.id]] = dist[u.id] + 1;
+                         Q.add(B.nodeArray[pair[v.id]]);
+                     }
+                 }
+             }
+         }
+        return dist[nil] != Integer.MAX_VALUE;
     }
-    private boolean bfsIteration(){
-        while (!Q.isEmpty()){
-            Node u = Q.poll();
-            if (dist[u.id] < dist[size * 2]){
-                for (int[] neighbourInfo : u.neighbours){
-                    Node v = B.nodeArray[neighbourInfo[0]];
-                    if (dist[pair[v.id]] == Integer.MAX_VALUE && v.active){
-                        dist[pair[v.id]] = dist[u.id] + 1;
-                        Q.add(B.nodeArray[pair[v.id]]);
-                    }
-                }
-            }
-        }
-        return dist[size * 2] != Integer.MAX_VALUE;
-    }
+
+    /**
+     * depth-first-search.
+     * @param u staring node
+     * @return true if successful
+     */
      boolean dfs(Node u){
         if (u.id != nil){
             for (int[] neighbourInfo : u.neighbours){
@@ -120,7 +115,7 @@ public class HopcroftKarp {
 
     /**
      * deletes the corresponding nodes from a list of nodes that were deleted in the non-bipartite graph.
-     * @param nodes
+     * @param nodes list of nodes to remove
      */
     public void updateDeleteNodes(LinkedList<Node> nodes){
         states.push(pair.clone());
@@ -143,7 +138,7 @@ public class HopcroftKarp {
 
     /**
      * readd previously deleted nodes from a stack.
-     * @param nodes
+     * @param nodes list of nodes to add
      */
     public void updateAddNodes(LinkedList<Node> nodes){
         for (Node node : nodes){
@@ -160,14 +155,7 @@ public class HopcroftKarp {
      * find augmenting path for currently not-matched nodes.
      */
     public void searchForAMatching(){
-        dist[nil] = Integer.MAX_VALUE;
-        for (int u = 0; u < size; u++) {
-            if (pair[u] == nil && B.nodeArray[u].active) {
-                dist[u] = 0;
-                Q.add(B.nodeArray[u]);
-            } else dist[u] = Integer.MAX_VALUE;
-        }
-        if (bfsIteration()){
+        while (bfs()){
             for (int i = 0; i < size; i++){
                 if (pair[i] == nil && B.nodeArray[i].active){
                     if (dfs(B.nodeArray[i])) {
@@ -178,5 +166,4 @@ public class HopcroftKarp {
         }
         lastLowerBound = matching/2;
     }
-
 }
