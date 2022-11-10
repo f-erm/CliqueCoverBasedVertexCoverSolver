@@ -1,5 +1,3 @@
-import sun.awt.image.ImageWatched;
-
 import java.util.Collections;
 import java.util.LinkedList;
 
@@ -28,32 +26,18 @@ public class Algorithms {
         }
     }
 
-    /*public LinkedList<Node> vc(Graph G) {
-        int k = 0;
-        while (true) {
-            System.out.println("# k is " + k);
-            System.out.println(recursiveSteps);
-            hk = new HopcroftKarp(G);
-            LinkedList<Node> S = vc_branch_nodes(G, k);
-            if (S != null) {
-                return S;
-            }
-            k++;
-        }
-    }*/
-
+    /**
+     * computes a vertex cover in Graph G up to size k.
+     * @param G graph
+     * @param k vertex cover size
+     * @param firstActiveNode first node in G.nodeArray that is still active
+     * @return a LinkedList of the nodes in the vertex cover.
+     */
     private LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode){
         if (k < 0 ) return null;
         if (G.totalEdges == 0) {
             return new LinkedList<>();
         }
-        //HopcroftKarp a = new HopcroftKarp(G);
-        /*LinkedList<Node> linkedList = new LinkedList<>();
-        linkedList.add(G.nodeArray[0]);
-        linkedList.add(G.nodeArray[2]);
-        linkedList.add(G.nodeArray[3]);
-        a.updateDeleteNodes(linkedList);
-        a.updateAddNodes(linkedList);*/
         if (k < hk.lastLowerBound){
             hk.searchForAMatching();
             if (k < hk.lastLowerBound) return null;
@@ -121,6 +105,13 @@ public class Algorithms {
         }
         return null;
     }
+
+    /**
+     * computes a vertex cover, given a graph with maximum degree of 2.
+     * @param G graph
+     * @param k vertex cover size
+     * @return a LinkedList of nodes in the vertex cover.
+     */
     public LinkedList<Node> solveSimpleGraph(Graph G, int k){
         if (k < 0) return null;
         for (Node node : G.nodeArray){
