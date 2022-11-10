@@ -17,10 +17,9 @@ public class Algorithms {
         k = hk.matching/2 + G.partialSolution.size();
         while (true) {
             System.out.println("# k is " + k);
-            //System.out.println(recursiveSteps);
+            System.out.println(recursiveSteps);
             hk = new HopcroftKarp(G);
-            //LinkedList<OldNode> S = vc_branch_nodes(G, k-partialVC.size());
-            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size());
+            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0);
             if (S != null) {
                 S.addAll(G.partialSolution);
                 return S;
@@ -43,7 +42,7 @@ public class Algorithms {
         }
     }*/
 
-    private LinkedList<Node> vc_branch_nodes(Graph G, int k){
+    private LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode){
         if (k < 0 ) return null;
         if (G.totalEdges == 0) {
             return new LinkedList<>();
@@ -63,9 +62,12 @@ public class Algorithms {
         LinkedList<Node> S;
         LinkedList<Node> neighbours = new LinkedList<>();
         int numberOfNeighbours = 0;
-        for (Node myNode : G.nodeArray) {
-            if (myNode.activeNeighbours == 0 || !myNode.active) continue;
-            v = myNode;
+        while (true) {
+            if (G.nodeArray[firstActiveNode].activeNeighbours == 0 || !G.nodeArray[firstActiveNode].active){
+                firstActiveNode++;
+                continue;
+            }
+            v = G.nodeArray[firstActiveNode];
             if (v.activeNeighbours < 3){
                 boolean graphIsSimple = true;
                 for (Node n : G.nodeArray){
@@ -89,7 +91,7 @@ public class Algorithms {
             numberOfNeighbours = neighbours.size();
             hk.updateDeleteNodes(neighbours);
             // S is the vertex cover
-            S = vc_branch_nodes(G, k - numberOfNeighbours);
+            S = vc_branch_nodes(G, k - numberOfNeighbours, firstActiveNode);
             recursiveSteps++;
             Collections.reverse(neighbours);
             for (Node u : neighbours) {
@@ -109,7 +111,7 @@ public class Algorithms {
         ll.add(v);
         hk.updateDeleteNodes(ll);
         // S is the vertex cover
-        S = vc_branch_nodes(G, k - 1);
+        S = vc_branch_nodes(G, k - 1, firstActiveNode);
         recursiveSteps++;
         G.reeaddNode(v);
         hk.updateAddNodes(ll);

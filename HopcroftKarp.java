@@ -117,10 +117,7 @@ public class HopcroftKarp {
         for (Node node : nodes){
             Node partnerV = B.nodeArray[pair[node.id]];
             Node partnerU = B.nodeArray[pair[node.id + size]];
-            if (partnerU.id != nil) {
-                matching --;
-                dist[partnerU.id] = 0;
-            }
+            if (partnerU.id != nil) matching --;
             if (pair[node.id] != nil) matching--;
             pair[partnerU.id] = nil;
             pair[node.id] = nil;
@@ -128,8 +125,7 @@ public class HopcroftKarp {
             pair[partnerV.id] = nil;
             B.nodeArray[node.id].active = false;
             B.nodeArray[node.id + size].active = false;
-        }
-        dist[size * 2] = Integer.MAX_VALUE;
+        };
         //System.out.println(System.nanoTime() - time);
         /*for (int u = 0; u < size; u++) {
             if (pair[u] == nil && B.nodeArray[u].active) {
@@ -160,6 +156,7 @@ public class HopcroftKarp {
     }
 
     public void searchForAMatching(){
+        dist[nil] = Integer.MAX_VALUE;
         for (int u = 0; u < size; u++) {
             if (pair[u] == nil && B.nodeArray[u].active) {
                 dist[u] = 0;
