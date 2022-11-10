@@ -49,13 +49,13 @@ public class Algorithms {
         if (G.totalEdges == 0) {
             return new LinkedList<>();
         }
-        HopcroftKarp a = new HopcroftKarp(G);
-        LinkedList<Node> linkedList = new LinkedList<>();
+        //HopcroftKarp a = new HopcroftKarp(G);
+        /*LinkedList<Node> linkedList = new LinkedList<>();
         linkedList.add(G.nodeArray[0]);
         linkedList.add(G.nodeArray[2]);
         linkedList.add(G.nodeArray[3]);
         a.updateDeleteNodes(linkedList);
-        a.updateAddNodes(linkedList);
+        a.updateAddNodes(linkedList);*/
         if (k < hk.matching/2) return null;
         Node v = null;
         LinkedList<Node> S;
