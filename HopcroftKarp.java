@@ -1,7 +1,7 @@
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
-public class HopcroftKarp {
+public class HopcroftKarp implements Cloneable {
     Graph B; //bipartite graph
     int size; //size of one side of the bipartite graph
     int nil; //size of the bipartite graph and index position of nil node
@@ -90,6 +90,9 @@ public class HopcroftKarp {
         return dist[nil] != Integer.MAX_VALUE;
     }
 
+    //not a real constructor, only ised for the deepcopy thingy!!!!!
+    public HopcroftKarp(){}
+
     /**
      * depth-first-search.
      * @param u staring node
@@ -165,5 +168,23 @@ public class HopcroftKarp {
             }
         }
         lastLowerBound = matching/2;
+    }
+
+    @Override
+    public Object clone(){
+        //THIS PROBABLY DOES NOT WORK (yet)
+        HKn =  HopcroftKarp();
+        HKn.size = this.size;
+        HKn.nil = this.nil;
+        HKn.pair = this.pair.clone();
+        HKn.dist = this.dist.clone();
+        HKN.matching = this.matching;
+        HKn.lastLowerBound = this.lastLowerBound;
+        HKn.states = this.states.clone();
+        HKn.numMatching = this.numMatching.clone();
+        HKn.dists = this.dists.clone();
+        HKN.B = this.B.clone();//geht das??? SEHR UNKLAR!!! TO BE TESTED!!!!
+         
+        return HKn;
     }
 }
