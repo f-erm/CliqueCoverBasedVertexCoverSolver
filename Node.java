@@ -1,7 +1,7 @@
 public class Node implements Comparable<Node>{
     String name;
     int id;
-    int[][] neighbours;
+    int[][] neighbours;//neighbours[0] is id of all the neighbors of this node,  neighburs[1] is index in the given neighboor's array where our current node can be found.
     boolean active;
     int activeNeighbours;
 

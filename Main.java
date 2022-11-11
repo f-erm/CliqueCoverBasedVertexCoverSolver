@@ -1,5 +1,6 @@
 import java.util.LinkedList;
 
+//Main halt. duh...
 public class Main {
     public static void main(String[] args) {
         long startTime = System.nanoTime();

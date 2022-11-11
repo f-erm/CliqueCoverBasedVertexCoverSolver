@@ -17,7 +17,7 @@ public class HopcroftKarp {
     /**
      * Constructs the bipartite graph used for a lower bound of vertex cover and
      * runs the Hopcroft-Karp Algorithm to find a maximum matching. The
-     * lower bound is saved in lastlowerBound.
+     * lower bound is saved in lastlowerBound. Constructor.
      * @param G input Graph
      *
      *
@@ -114,7 +114,7 @@ public class HopcroftKarp {
     }
 
     /**
-     * deletes the corresponding nodes from a list of nodes that were deleted in the non-bipartite graph.
+     * deletes the corresponding nodes from a list of nodes that were deleted in the non-bipartite graph. Update the bipartite G after we updated the original G
      * @param nodes list of nodes to remove
      */
     public void updateDeleteNodes(LinkedList<Node> nodes){
@@ -137,7 +137,7 @@ public class HopcroftKarp {
     }
 
     /**
-     * readd previously deleted nodes from a stack.
+     * readd previously deleted nodes from a stack. Inverse of updateDeleteNodes
      * @param nodes list of nodes to add
      */
     public void updateAddNodes(LinkedList<Node> nodes){
@@ -152,7 +152,7 @@ public class HopcroftKarp {
     }
 
     /**
-     * find augmenting path for currently not-matched nodes.
+     * find augmenting path for currently not-matched nodes. Update Matching
      */
     public void searchForAMatching(){
         while (bfs()){

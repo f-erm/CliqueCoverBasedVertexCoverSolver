@@ -14,7 +14,7 @@ public class Graph {
     }
 
     /**
-     * adds an edge when reading the input.
+     * adds an edge when reading the input. Only used in the beginning on OldNodes.
      * @param first first node
      * @param second second node
      */
@@ -31,7 +31,7 @@ public class Graph {
     }
 
     /**
-     * set a node to inactive
+     * set a node to inactive, updates count of active neioghbours for all its neighbors and decreases the Graph's total edge count as well.
      * @param n node to remove
      */
     public void removeNode(Node n){
@@ -43,7 +43,7 @@ public class Graph {
     }
 
     /**
-     * set the node to active again
+     * set the node to active again. Opposite of removeNode
      * @param n node to readd
      */
     public void reeaddNode(Node n){

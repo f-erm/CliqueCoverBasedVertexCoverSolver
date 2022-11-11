@@ -6,6 +6,7 @@ import java.util.*;
 public class Parser {
 
     public static Graph parseGraph(String pathname){
+        //Create Graph as Hashmap of OldNodes
         Graph g = new Graph();
         try (BufferedReader br = new BufferedReader(new FileReader(pathname))) {
             String line;
@@ -19,11 +20,13 @@ public class Parser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        //Convert Hashmap into sorted list and apply REDUKTIONSREGELN. 
+        //This detour is mainly to allow sorting of the graph. Sorting after we have converted into an array is impossible, as we reference nodes by their graph array index
         LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
         Collections.sort(ll);
         g.oldNodeList = ll;
         Reduction.removeDegreeOne(g);
-
+        //convert list of OldNodes into array of Nodes
         g.nodeArray = new Node[g.oldNodeList.size()];
         int j = 0;
         for (OldNode oldNode : ll){
@@ -37,6 +40,9 @@ public class Parser {
         }
         return g;
     }
+
+
+    //Same function as above, but input is not given as string and provided by the scanner instead. TODO: combine both into one function
     public static Graph parseGraph(){
         Graph g = new Graph();
         Scanner scanner = new Scanner(System.in);
