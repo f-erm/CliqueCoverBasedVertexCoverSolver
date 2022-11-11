@@ -43,7 +43,7 @@ public class Node implements Comparable<Node>, Cloneable{
 
     @Override
     public Object clone(){ //to be tested!
-        Node N = new Node(this.name,this.id,this.size);
+        Node N = new Node(this.name,this.id,0);
         N.active = this.active;
         N.activeNeighbours = this.activeNeighbours;
         N.neighbours = java.util.Arrays.stream(this.neighbours).map(el -> el.clone()).toArray($ -> this.neighbours.clone());

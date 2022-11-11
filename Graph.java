@@ -77,8 +77,9 @@ public class Graph implements Cloneable{
     @Override
     public Object clone(){
         Graph Gnew = new Graph();
+        Gnew.nodeArray = new Node[this.nodeArray.length];
         for (int i=0;i< this.nodeArray.length; i++ ){
-            Gnew.nodeArray[i] = this.nodeArray[i].copy();
+            Gnew.nodeArray[i] = (Node) this.nodeArray[i].clone();
         }
         Gnew.partialSolution = this.partialSolution; //this might be janky. partialsolution refers to the uncopied nodes.
         Gnew.totalEdges = this.totalEdges;
