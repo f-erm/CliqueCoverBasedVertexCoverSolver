@@ -90,7 +90,7 @@ public class HopcroftKarp implements Cloneable {
         return dist[nil] != Integer.MAX_VALUE;
     }
 
-    //not a real constructor, only ised for the deepcopy thingy!!!!!
+    //not a real constructor, only used for the deepcopy thingy!!!!!
     public HopcroftKarp(){}
 
     /**
@@ -173,17 +173,18 @@ public class HopcroftKarp implements Cloneable {
     @Override
     public Object clone(){
         //THIS PROBABLY DOES NOT WORK (yet)
-        HKn =  HopcroftKarp();
+        HopcroftKarp HKn =  new HopcroftKarp();
         HKn.size = this.size;
         HKn.nil = this.nil;
-        HKn.pair = this.pair.clone();
+        HKn.pair = (int[]) this.pair.clone();
         HKn.dist = this.dist.clone();
-        HKN.matching = this.matching;
+        HKn.matching = this.matching;
         HKn.lastLowerBound = this.lastLowerBound;
-        HKn.states = this.states.clone();
-        HKn.numMatching = this.numMatching.clone();
-        HKn.dists = this.dists.clone();
-        HKN.B = this.B.clone();//geht das??? SEHR UNKLAR!!! TO BE TESTED!!!!
+        HKn.states = (Stack<int[]>) this.states.clone();
+        HKn.numMatching = (Stack<Integer>) this.numMatching.clone();
+        HKn.dists = (Stack<int[]>) this.dists.clone();
+        HKn.numMatching = (Stack<Integer>) this.numMatching.clone();
+        HKn.B = (Graph) this.B.clone();//geht das??? SEHR UNKLAR!!! TO BE TESTED!!!!
          
         return HKn;
     }
