@@ -17,7 +17,7 @@ public class HopcroftKarp {
     /**
      * Constructs the bipartite graph used for a lower bound of vertex cover and
      * runs the Hopcroft-Karp Algorithm to find a maximum matching. The
-     * lower bound is saved in lastlowerBound. Constructor.
+     * lower bound is saved in lastlowerBound.
      * @param G input Graph
      *
      *

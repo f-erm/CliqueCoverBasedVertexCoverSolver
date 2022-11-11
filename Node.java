@@ -1,4 +1,4 @@
-public class Node implements Comparable<Node>{
+public class Node implements Comparable<Node>, Cloneable{
     String name;
     int id;
     int[][] neighbours;//neighbours[0] is id of all the neighbors of this node,  neighburs[1] is index in the given neighboor's array where our current node can be found.
@@ -39,5 +39,15 @@ public class Node implements Comparable<Node>{
     @Override
     public int compareTo(Node o) {
         return Integer.compare(o.activeNeighbours,this.activeNeighbours);
+    }
+
+    @Override
+    public Object clone(){ //to be tested!
+        Node N = new Node(this.name,this.id,this.size);
+        N.active = this.active;
+        N.activeNeighbours = this.activeNeighbours;
+        N.neighbours = java.util.Arrays.stream(this.neighbours).map(el -> el.clone()).toArray($ -> this.neighbours.clone());
+        return N;
+
     }
 }

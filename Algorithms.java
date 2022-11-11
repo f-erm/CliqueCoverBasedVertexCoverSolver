@@ -19,7 +19,7 @@ public class Algorithms {
         int k = hk.lastLowerBound + G.partialSolution.size();
         while (true) {
             System.out.println("# k is " + k);
-            System.out.println(recursiveSteps);
+            System.out.println("# recursiveSteps" + recursiveSteps);
             LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0);
             if (S != null) {
                 S.addAll(G.partialSolution);

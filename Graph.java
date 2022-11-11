@@ -1,6 +1,6 @@
 import java.util.HashMap;
 import java.util.LinkedList;
-public class Graph {
+public class Graph implements Cloneable{
 
     LinkedList<OldNode> oldNodeList; //for the beginning only
     Node[] nodeArray; //stores the nodes of the graph, whether they are active or not, ordered
@@ -71,5 +71,17 @@ public class Graph {
     }
     public void setPartialSolution(LinkedList<Node> partialSolution){
         this.partialSolution = partialSolution;
+    }
+
+
+    @Override
+    public Object clone(){
+        Graph Gnew = new Graph();
+        for (int i=0;i< this.nodeArray.length; i++ ){
+            Gnew.nodeArray[i] = this.nodeArray[i].copy();
+        }
+        Gnew.partialSolution = this.partialSolution; //this might be janky. partialsolution refers to the uncopied nodes.
+        Gnew.totalEdges = this.totalEdges;
+        return Gnew;
     }
 }
