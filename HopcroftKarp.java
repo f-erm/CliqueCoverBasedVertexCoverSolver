@@ -8,6 +8,7 @@ public class HopcroftKarp implements Cloneable {
     int[] pair; //matching partner of each node
     int[] dist;
     int matching;
+    int totalCycleLB;
     int lastLowerBound;
     Queue<Node> Q;
     Stack<int[]> states;
@@ -90,7 +91,7 @@ public class HopcroftKarp implements Cloneable {
         return dist[nil] != Integer.MAX_VALUE;
     }
 
-    //not a real constructor, only used for the deepcopy thingy!!!!!
+    //not a real constructor, only used for the deepcopy
     public HopcroftKarp(){}
 
     /**
@@ -168,11 +169,29 @@ public class HopcroftKarp implements Cloneable {
             }
         }
         lastLowerBound = matching/2;
+        boolean[] inCycle = new boolean[size];
+        totalCycleLB = 0;
+        for (int i = 0; i < size; i++){
+            if (!inCycle[i] && B.nodeArray[i].active && pair[i] != nil){
+                int cycleLB = 1;
+                int partner = pair[i];
+                inCycle[i] = true;
+                while (partner != i + size){
+                    if (partner == nil || inCycle[partner - size]){
+                        cycleLB--;
+                        break;
+                    }
+                    inCycle[partner - size] = true;
+                    partner = pair[partner - size];
+                    cycleLB++;
+                }
+                totalCycleLB += (cycleLB + 1)/ 2;
+            }
+        }
     }
 
     @Override
     public Object clone(){
-        //THIS PROBABLY DOES NOT WORK (yet)
         HopcroftKarp HKn =  new HopcroftKarp();
         HKn.size = this.size;
         HKn.nil = this.nil;
@@ -183,8 +202,8 @@ public class HopcroftKarp implements Cloneable {
         HKn.states = (Stack<int[]>) this.states.clone();
         HKn.numMatching = (Stack<Integer>) this.numMatching.clone();
         HKn.dists = (Stack<int[]>) this.dists.clone();
-        HKn.numMatching = (Stack<Integer>) this.numMatching.clone();
-        HKn.B = (Graph) this.B.clone();//geht das??? SEHR UNKLAR!!! TO BE TESTED!!!!
+        HKn.numLastLowerBound = (Stack<Integer>) this.numLastLowerBound.clone();
+        HKn.B = (Graph) this.B.clone();
          
         return HKn;
     }

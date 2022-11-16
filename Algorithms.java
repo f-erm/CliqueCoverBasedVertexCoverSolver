@@ -1,12 +1,18 @@
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.concurrent.*;
 
 public class Algorithms {
 
     int recursiveSteps;
-    HopcroftKarp hk; //hk is used globaly
-    public Algorithms(){
+    int ProcCount;
+    ThreadPoolExecutor exec;
+
+    public Algorithms(){//minor changes to class
         recursiveSteps = 0;
+        ProcCount = Runtime.getRuntime().availableProcessors();
+        exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(ProcCount);//create threadpool based on available cores.
+
     }
 
     /**
@@ -15,14 +21,15 @@ public class Algorithms {
      * @return a smallest vertex cover
      */
     public LinkedList<Node> vc(Graph G) {
-        hk = new HopcroftKarp(G);
+        HopcroftKarp hk = new HopcroftKarp(G);
         int k = hk.lastLowerBound + G.partialSolution.size();
         while (true) {
             System.out.println("# k is " + k);
-            System.out.println("# recursiveSteps" + recursiveSteps);
-            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0);
+            System.out.println("# recursiveSteps " + recursiveSteps);
+            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk);
             if (S != null) {
                 S.addAll(G.partialSolution);
+                exec.shutdown();
                 return S;
             }
             k++;
@@ -36,19 +43,19 @@ public class Algorithms {
      * @param firstActiveNode first node in G.nodeArray that is still active
      * @return a LinkedList of the nodes in the vertex cover.
      */
-    private LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode){
+    public LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode, HopcroftKarp hk){
         //Stop for edgeless G
         if (k < 0 ) return null;
         if (G.totalEdges == 0) {
             return new LinkedList<>();
         }
         //Only if we fell below HKs lower bound we compute HK again. If we remain under the lower bound there is no solution
-        if (k < hk.lastLowerBound){
+        //if (k < hk.lastLowerBound){ //maybe test influence of this later
             hk.searchForAMatching();
-            if (k < hk.lastLowerBound) return null;
-        }
+            if (k < hk.lastLowerBound || k < hk.totalCycleLB) return null;
+        //}
 
-        LinkedList<Node> S;
+        LinkedList<Node> S = new LinkedList<Node>();
         LinkedList<Node> neighbours = new LinkedList<>();
         Node v;
         while (true) {
@@ -71,6 +78,11 @@ public class Algorithms {
             }
             break;
         }
+
+
+        boolean threaded = false;
+        Future<LinkedList<Node>> Sthread = CompletableFuture.completedFuture(new LinkedList<Node>());//init empty future
+
         //Branch for deleting all neighbors
         if (k >= v.activeNeighbours && v.activeNeighbours > 0){
             for (int[] u: v.neighbours) {
@@ -81,16 +93,23 @@ public class Algorithms {
                 }
             }
             hk.updateDeleteNodes(neighbours);
-            S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode); //the returned cover
+            if (exec.getActiveCount() < ProcCount){//we can thread
+                threaded = true;
+                Sthread = exec.submit(new Worker((Graph) G.clone(),k- neighbours.size(),(HopcroftKarp) hk.clone(),firstActiveNode,this));
+            }else{
+                S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk); //the returned cover
+            }
             recursiveSteps++;
             Collections.reverse(neighbours);
             for (Node u : neighbours) {
                 G.reeaddNode(u);
             }
             hk.updateAddNodes(neighbours);
-            if (S != null) {
-                S.addAll(neighbours);
-                return S;
+            if (!threaded){//if we didnt thread we can already evaluate result
+                if (S != null) {
+                    S.addAll(neighbours);
+                    return S;
+                }
             }
         }
         //branch for deleting the node instead
@@ -98,10 +117,20 @@ public class Algorithms {
         LinkedList<Node> ll = new LinkedList<>();
         ll.add(v);
         hk.updateDeleteNodes(ll);
-        S = vc_branch_nodes(G, k - 1, firstActiveNode); //the returned cover
+        S = vc_branch_nodes(G, k - 1, firstActiveNode,hk); //the returned cover
         recursiveSteps++;
         G.reeaddNode(v);
         hk.updateAddNodes(ll);
+        if (threaded){//we did thread, time to look at the result
+            try{
+                LinkedList<Node> Str = Sthread.get();
+                if (Str != null) {
+                    Str.addAll(neighbours);
+                    return Str;
+                }
+            }catch(Exception e){}
+
+        }
         if (S != null) {
             S.add(v);
             return S;
