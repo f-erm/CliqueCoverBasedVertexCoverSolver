@@ -20,25 +20,7 @@ public class Parser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        //Convert Hashmap into sorted list and apply REDUKTIONSREGELN. 
-        //This detour is mainly to allow sorting of the graph. Sorting after we have converted into an array is impossible, as we reference nodes by their graph array index
-        LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
-        Collections.sort(ll);
-        g.oldNodeList = ll;
-        Reduction.removeDegreeOne(g);
-        //convert list of OldNodes into array of Nodes
-        g.nodeArray = new Node[g.oldNodeList.size()];
-        int j = 0;
-        for (OldNode oldNode : ll){
-            oldNode.id = j++;
-        }
-        int i = 0;
-        for (OldNode oldNode : ll){
-            oldNode.id = i;
-            Node n = new Node(oldNode);
-            g.nodeArray[i++] = n;
-        }
-        return g;
+        return createGraph(g);
     }
 
 
@@ -55,11 +37,17 @@ public class Parser {
 
             g.addEdge(nodes[0], nodes[1]);
         }
+      return createGraph(g);
+
+    }
+    private static Graph createGraph(Graph g){
+        //Convert Hashmap into sorted list and apply REDUKTIONSREGELN.
+        //This detour is mainly to allow sorting of the graph. Sorting after we have converted into an array is impossible, as we reference nodes by their graph array index
         LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
         Collections.sort(ll);
         g.oldNodeList = ll;
-        Reduction.removeDegreeOne(g);
-
+        //Reduction.removeDegreeOne(g);
+        //convert list of OldNodes into array of Nodes
         g.nodeArray = new Node[g.oldNodeList.size()];
         int j = 0;
         for (OldNode oldNode : ll){
@@ -72,7 +60,6 @@ public class Parser {
             g.nodeArray[i++] = n;
         }
         return g;
-
     }
 
 }
