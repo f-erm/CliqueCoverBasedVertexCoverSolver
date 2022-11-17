@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 
@@ -22,21 +23,22 @@ public class CliqueCover {
             permutation.add(i);
         }
         Collections.shuffle(permutation);
-        reerun = 3;
+        reerun = 100;
         lowerBound = 0;
 
 
         while (k > 0 && reerun > 0){
             colorclasses = new LinkedList[G.activeNodes];
             colorcounts = new int[G.activeNodes];
+            FirstFreeColor = 0;
             //set all nodes to color unknown
             for (int j = 0; j < G.nodeArray.length; j++) {
                 G.nodeArray[j].color = -1;
-                permutation = cliqueCover();
             }
+            permutation = cliqueCover();
             k--;
         }
-        System.out.println("#the clique cover took "+ ((System.nanoTime()-startTime)/1000000) + " ms");
+        //System.out.println("#the clique cover took "+ ((System.nanoTime()-startTime)/1000000) + " ms");
         return lowerBound;
     }
 
@@ -46,7 +48,8 @@ public class CliqueCover {
             Node myNode = G.nodeArray[i];
             if (!myNode.active) continue;
             //for all neighbors that are active and colored decrement that color
-            int remember = 0;
+            int remember = -1;
+            boolean createNewClass = true;
             for (int[] neighbourInfo: myNode.neighbours) {
                 Node neighbour = G.nodeArray[neighbourInfo[0]];
                 if (!neighbour.active || neighbour.color==-1) continue;
@@ -56,19 +59,31 @@ public class CliqueCover {
                     myNode.color = neighbour.color;
                     colorcounts[neighbour.color]++;
                     remember = neighbourInfo[0];
+                    createNewClass = false;
                     break;
                 }
+
             }
-            LinkedList ll = new LinkedList<>();
-            ll.add (myNode.id);
-            colorclasses[FirstFreeColor] = ll;
-            colorcounts[FirstFreeColor] = 1;
-            FirstFreeColor++;
-            
+            for (int[] neighbourInfo : myNode.neighbours){
+                Node neighbour = G.nodeArray[neighbourInfo[0]];
+                if (!neighbour.active || neighbour.color==-1) continue;
+                colorcounts[neighbour.color] ++;
+                if (remember == neighbourInfo[0]) break;
+            }
+            if (createNewClass) {
+                LinkedList<Integer> ll = new LinkedList<>();
+                ll.add(myNode.id);
+                myNode.color = FirstFreeColor;
+                colorclasses[FirstFreeColor] = ll;
+                colorcounts[FirstFreeColor] = 1;
+                FirstFreeColor++;
+            }
+
         }
         LinkedList<Integer> perm = new LinkedList<>();
         //Collections.shuffle(colorclasses);
         for (LinkedList<Integer> color: colorclasses) {
+            if (color == null) break;
             perm.addAll(color);
         }
         int newlowerBound = G.activeNodes - FirstFreeColor;
@@ -78,6 +93,9 @@ public class CliqueCover {
         else {
             lowerBound = newlowerBound;
         }
+        Collections.reverse(perm);
+        //System.out.println("the lower bound is " + lowerBound);
+        //System.out.println("the first free color is " + FirstFreeColor);
         return perm;
     }
 
