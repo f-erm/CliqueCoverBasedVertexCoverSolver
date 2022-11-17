@@ -5,6 +5,8 @@ public class Node implements Comparable<Node>, Cloneable{
     boolean active;
     int activeNeighbours;
 
+    int color;
+
     /**
      * translates an old node to a new node.
      * @param oldNode corresponding old node from parsing.

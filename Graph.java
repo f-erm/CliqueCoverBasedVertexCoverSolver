@@ -8,6 +8,7 @@ public class Graph implements Cloneable{
     HashMap<String, OldNode> nodeHashMap; // for parsing only
     LinkedList<Node> partialSolution;
     int totalEdges;
+    int activeNodes;
     public Graph(){
         nodeHashMap = new HashMap<>();
         totalEdges = 0;
@@ -40,6 +41,7 @@ public class Graph implements Cloneable{
             nodeArray[n.neighbours[i][0]].activeNeighbours--;
         }
         totalEdges = totalEdges - n.activeNeighbours;
+        activeNodes --;
     }
 
     /**
@@ -52,6 +54,7 @@ public class Graph implements Cloneable{
             nodeArray[n.neighbours[i][0]].activeNeighbours++;
         }
         totalEdges += n.activeNeighbours;
+        activeNodes ++;
     }
 
 
