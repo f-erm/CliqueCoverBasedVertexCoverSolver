@@ -14,14 +14,14 @@ public class CliqueCover {
     }
 
     public int cliqueCoverIterations(int k) {
-        //long startTime = System.nanoTime();
+        long startTime = System.nanoTime();
         permutation = new LinkedList<Integer>();
         //int[] colorclasses = new int[G.nodeArray.length];
         for (int i = 0; i < G.nodeArray.length; i++) {
             permutation.add(i);
         }
         Collections.shuffle(permutation);
-        reerun = 5;
+        reerun = 3;
         lowerBound = 0;
 
 
@@ -39,7 +39,7 @@ public class CliqueCover {
             }
         k--;
         }
-        //System.out.println("#the clique cover took "+ ((System.nanoTime()-startTime)/1000000) + " ms");
+        System.out.println("#the clique cover took "+ ((System.nanoTime()-startTime)/1000000) + " ms");
         return lowerBound;
     }
 
@@ -71,7 +71,7 @@ public class CliqueCover {
             }
         }
         LinkedList<Integer> perm = new LinkedList<>();
-        Collections.shuffle(colorclasses);
+        //Collections.shuffle(colorclasses);
         for (LinkedList<Integer> color: colorclasses) {
             perm.addAll(color);
         }

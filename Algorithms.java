@@ -7,12 +7,14 @@ public class Algorithms {
     int recursiveSteps;
     int ProcCount;
     ThreadPoolExecutor exec;
+    boolean WeWannaThreatYo = false;
 
     public Algorithms(){//minor changes to class
         recursiveSteps = 0;
-        ProcCount = Runtime.getRuntime().availableProcessors();
-        exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(ProcCount);//create threadpool based on available cores.
-
+        if (WeWannaThreatYo) {
+            ProcCount = Runtime.getRuntime().availableProcessors();
+            exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(ProcCount);//create threadpool based on available cores.
+        }
     }
 
     /**
@@ -22,14 +24,15 @@ public class Algorithms {
      */
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
-        int k = hk.lastLowerBound + G.partialSolution.size();
+        CliqueCover cc = new CliqueCover(G);
+        int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100)); /*+ G.partialSolution.size()*/;
         while (true) {
             System.out.println("# k is " + k);
             System.out.println("# recursiveSteps " + recursiveSteps);
-            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk);
+            LinkedList<Node> S = vc_branch_nodes(G, k /*- G.partialSolution.size()*/, 0,hk);
             if (S != null) {
-                S.addAll(G.partialSolution);
-                exec.shutdown();
+                //S.addAll(G.partialSolution);
+                if (WeWannaThreatYo) exec.shutdown();
                 return S;
             }
             k++;
@@ -43,18 +46,21 @@ public class Algorithms {
      * @param firstActiveNode first node in G.nodeArray that is still active
      * @return a LinkedList of the nodes in the vertex cover.
      */
-    public LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode, HopcroftKarp hk){
+    public LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode, HopcroftKarp hk) {
         //Stop for edgeless G
-        if (k < 0 ) return null;
+        if (k < 0) return null;
         if (G.totalEdges == 0) {
             return new LinkedList<>();
         }
         //Only if we fell below HKs lower bound we compute HK again. If we remain under the lower bound there is no solution
         //if (k < hk.lastLowerBound){ //maybe test influence of this later
-            hk.searchForAMatching();
-            if (k < hk.lastLowerBound || k < hk.totalCycleLB) return null;
+        hk.searchForAMatching();
+        if (k < hk.lastLowerBound || k < hk.totalCycleLB) return null;
         //}
-
+        //if (recursiveSteps % 3 == 0) {
+        CliqueCover cc = new CliqueCover(G);
+        if (k < cc.cliqueCoverIterations(5)) return null;
+        //}
         LinkedList<Node> S = new LinkedList<Node>();
         LinkedList<Node> neighbours = new LinkedList<>();
         Node v;
@@ -93,9 +99,13 @@ public class Algorithms {
                 }
             }
             hk.updateDeleteNodes(neighbours);
-            if (exec.getActiveCount() < ProcCount){//we can thread
-                threaded = true;
-                Sthread = exec.submit(new Worker((Graph) G.clone(),k- neighbours.size(),(HopcroftKarp) hk.clone(),firstActiveNode,this));
+            if(WeWannaThreatYo) {
+                if (exec.getActiveCount() < ProcCount) {//we can thread
+                    threaded = true;
+                    Sthread = exec.submit(new Worker((Graph) G.clone(), k - neighbours.size(), (HopcroftKarp) hk.clone(), firstActiveNode, this));
+                } else {
+                    S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk); //the returned cover
+                }
             }else{
                 S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk); //the returned cover
             }
@@ -121,7 +131,7 @@ public class Algorithms {
         recursiveSteps++;
         G.reeaddNode(v);
         hk.updateAddNodes(ll);
-        if (threaded){//we did thread, time to look at the result
+        if (threaded && WeWannaThreatYo){//we did thread, time to look at the result
             try{
                 LinkedList<Node> Str = Sthread.get();
                 if (Str != null) {
