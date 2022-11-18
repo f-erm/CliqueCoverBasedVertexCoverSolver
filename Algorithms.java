@@ -30,11 +30,11 @@ public class Algorithms {
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
         cc = new CliqueCover(G);
-        int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100, 6)); /*+ G.partialSolution.size()*/;
+        int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100, 6, null)); /*+ G.partialSolution.size()*/;
         while (true) {
             System.out.println("# k is " + k);
             System.out.println("# recursiveSteps " + recursiveSteps);
-            LinkedList<Node> S = vc_branch_nodes(G, k /*- G.partialSolution.size()*/, 0,hk);
+            LinkedList<Node> S = vc_branch_nodes(G, k /*- G.partialSolution.size()*/, 0,hk, null);
             if (S != null) {
                 //S.addAll(G.partialSolution);
                 if (WeWannaThreatYo) exec.shutdown();
@@ -51,7 +51,7 @@ public class Algorithms {
      * @param firstActiveNode first node in G.nodeArray that is still active
      * @return a LinkedList of the nodes in the vertex cover.
      */
-    public LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode, HopcroftKarp hk) {
+    public LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode, HopcroftKarp hk, LinkedList<Integer> lastPerm) {
         //Stop for edgeless G
         if (k < 0) return null;
         if (G.totalEdges == 0) {
@@ -66,11 +66,12 @@ public class Algorithms {
         }
         time = System.nanoTime();
         cc = new CliqueCover(G);
-        if (k < cc.cliqueCoverIterations(3, 2)) {
+        if (k < cc.cliqueCoverIterations(1, 2, lastPerm)) {
             totalBranchCutsCC++;
             totalTimeCC += System.nanoTime() - time;
             return null;
         }
+        lastPerm = cc.permutation;
         totalTimeCC += System.nanoTime() - time;
         LinkedList<Node> S = new LinkedList<Node>();
         LinkedList<Node> neighbours = new LinkedList<>();
@@ -115,10 +116,10 @@ public class Algorithms {
                     threaded = true;
                     Sthread = exec.submit(new Worker((Graph) G.clone(), k - neighbours.size(), (HopcroftKarp) hk.clone(), firstActiveNode, this));
                 } else {
-                    S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk); //the returned cover
+                    S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm); //the returned cover
                 }
             }else{
-                S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk); //the returned cover
+                S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm); //the returned cover
             }
             recursiveSteps++;
             Collections.reverse(neighbours);
@@ -138,7 +139,7 @@ public class Algorithms {
         LinkedList<Node> ll = new LinkedList<>();
         ll.add(v);
         hk.updateDeleteNodes(ll);
-        S = vc_branch_nodes(G, k - 1, firstActiveNode,hk); //the returned cover
+        S = vc_branch_nodes(G, k - 1, firstActiveNode,hk, lastPerm); //the returned cover
         recursiveSteps++;
         G.reeaddNode(v);
         hk.updateAddNodes(ll);

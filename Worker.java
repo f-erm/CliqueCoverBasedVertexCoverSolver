@@ -9,6 +9,7 @@ public class Worker implements Callable {
     HopcroftKarp hk;
     Algorithms Alg;
     int k;
+    LinkedList<Integer> lastPerm;
     int firstActiveNode;
 
     public Worker(Graph G, int k, HopcroftKarp hk,int firstActiveNode, Algorithms Alg){
@@ -22,6 +23,6 @@ public class Worker implements Callable {
 
     @Override    
     public LinkedList<Node> call() throws Exception {    
-        return Alg.vc_branch_nodes(G,k,firstActiveNode,hk);        
+        return Alg.vc_branch_nodes(G,k,firstActiveNode,hk,lastPerm);
     } 
 }   

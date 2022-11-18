@@ -16,16 +16,19 @@ public class CliqueCover {
 
     public CliqueCover(Graph G){
         this.G = G;
+        lowerBound = 0;
     }
 
-    public int cliqueCoverIterations(int k, int reerun) {
-        permutation = new LinkedList<Integer>();
-        for (int i = 0; i < G.nodeArray.length; i++) {
-            permutation.add(i);
+    public int cliqueCoverIterations(int k, int reerun, LinkedList<Integer> oldPermutation) {
+        if (oldPermutation == null){
+            permutation = new LinkedList<Integer>();
+            for (int i = 0; i < G.nodeArray.length; i++) {
+                permutation.add(i);
+            }
+            Collections.shuffle(permutation);
         }
-        Collections.shuffle(permutation);
+        else permutation = oldPermutation;
         this.reerun = reerun;
-        lowerBound = 0;
         while (k > 0 && reerun > 0){
             colorclasses = new LinkedList[G.activeNodes];
             colorcounts = new int[G.activeNodes];
