@@ -5,8 +5,13 @@ import java.util.concurrent.*;
 public class Algorithms {
 
     int recursiveSteps;
+    long totalTimeHK = 0;
+    long totalTimeCC = 0;
+    int totalBranchCutsHK = 0;
+    int totalBranchCutsCC = 0;
     int ProcCount;
     ThreadPoolExecutor exec;
+    CliqueCover cc;
     boolean WeWannaThreatYo = false;
 
     public Algorithms(){//minor changes to class
@@ -24,8 +29,8 @@ public class Algorithms {
      */
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
-        CliqueCover cc = new CliqueCover(G);
-        int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100)); /*+ G.partialSolution.size()*/;
+        cc = new CliqueCover(G);
+        int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100, 6)); /*+ G.partialSolution.size()*/;
         while (true) {
             System.out.println("# k is " + k);
             System.out.println("# recursiveSteps " + recursiveSteps);
@@ -52,15 +57,21 @@ public class Algorithms {
         if (G.totalEdges == 0) {
             return new LinkedList<>();
         }
-        //Only if we fell below HKs lower bound we compute HK again. If we remain under the lower bound there is no solution
-        //if (k < hk.lastLowerBound){ //maybe test influence of this later
+        long time = System.nanoTime();
         hk.searchForAMatching();
-        if (k < hk.lastLowerBound || k < hk.totalCycleLB) return null;
-        //}
-        //if (recursiveSteps % 3 == 0) {
-        CliqueCover cc = new CliqueCover(G);
-        if (k < cc.cliqueCoverIterations(5)) return null;
-        //}
+        totalTimeHK += System.nanoTime() - time;
+        if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
+            totalBranchCutsHK++;
+            return null;
+        }
+        time = System.nanoTime();
+        cc = new CliqueCover(G);
+        if (k < cc.cliqueCoverIterations(3, 2)) {
+            totalBranchCutsCC++;
+            totalTimeCC += System.nanoTime() - time;
+            return null;
+        }
+        totalTimeCC += System.nanoTime() - time;
         LinkedList<Node> S = new LinkedList<Node>();
         LinkedList<Node> neighbours = new LinkedList<>();
         Node v;

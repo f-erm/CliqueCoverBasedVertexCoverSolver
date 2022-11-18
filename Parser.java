@@ -57,6 +57,7 @@ public class Parser {
         for (OldNode oldNode : ll){
             oldNode.id = i;
             Node n = new Node(oldNode);
+            g.activeNodes++;
             g.nodeArray[i++] = n;
         }
         return g;

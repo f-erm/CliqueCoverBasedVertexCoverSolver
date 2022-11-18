@@ -1,6 +1,8 @@
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CliqueCover {
 
@@ -16,17 +18,14 @@ public class CliqueCover {
         this.G = G;
     }
 
-    public int cliqueCoverIterations(int k) {
-        long startTime = System.nanoTime();
+    public int cliqueCoverIterations(int k, int reerun) {
         permutation = new LinkedList<Integer>();
         for (int i = 0; i < G.nodeArray.length; i++) {
             permutation.add(i);
         }
         Collections.shuffle(permutation);
-        reerun = 100;
+        this.reerun = reerun;
         lowerBound = 0;
-
-
         while (k > 0 && reerun > 0){
             colorclasses = new LinkedList[G.activeNodes];
             colorcounts = new int[G.activeNodes];
@@ -38,7 +37,6 @@ public class CliqueCover {
             permutation = cliqueCover();
             k--;
         }
-        //System.out.println("#the clique cover took "+ ((System.nanoTime()-startTime)/1000000) + " ms");
         return lowerBound;
     }
 
@@ -81,7 +79,7 @@ public class CliqueCover {
 
         }
         LinkedList<Integer> perm = new LinkedList<>();
-        //Collections.shuffle(colorclasses);
+        shuffleArray(colorclasses);
         for (LinkedList<Integer> color: colorclasses) {
             if (color == null) break;
             perm.addAll(color);
@@ -98,5 +96,16 @@ public class CliqueCover {
         //System.out.println("the first free color is " + FirstFreeColor);
         return perm;
     }
-
+    private void shuffleArray(LinkedList<Integer>[] ar)
+    {
+        Random rnd = ThreadLocalRandom.current();
+        for (int i = FirstFreeColor - 1; i > 0; i--)
+        {
+            int index = rnd.nextInt(i + 1);
+            // Simple swap
+            LinkedList<Integer> a = ar[index];
+            ar[index] = ar[i];
+            ar[i] = a;
+        }
+    }
 }
