@@ -9,6 +9,7 @@ public class Algorithms {
     long totalTimeCC = 0;
     int totalBranchCutsHK = 0;
     int totalBranchCutsCC = 0;
+    boolean doCliqueCover = true;
     int ProcCount;
     ThreadPoolExecutor exec;
     CliqueCover cc;
@@ -30,13 +31,14 @@ public class Algorithms {
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
         cc = new CliqueCover(G);
-        int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100, 6, null)); /*+ G.partialSolution.size()*/;
+        int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100, 6, null)) + G.partialSolution.size();
         while (true) {
+            //if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
             System.out.println("# k is " + k);
             System.out.println("# recursiveSteps " + recursiveSteps);
-            LinkedList<Node> S = vc_branch_nodes(G, k /*- G.partialSolution.size()*/, 0,hk, null);
+            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, null);
             if (S != null) {
-                //S.addAll(G.partialSolution);
+                S.addAll(G.partialSolution);
                 if (WeWannaThreatYo) exec.shutdown();
                 return S;
             }
@@ -65,14 +67,16 @@ public class Algorithms {
             return null;
         }
         time = System.nanoTime();
-        cc = new CliqueCover(G);
-        if (k < cc.cliqueCoverIterations(1, 2, lastPerm)) {
-            totalBranchCutsCC++;
+        if (doCliqueCover) {
+            cc = new CliqueCover(G);
+            if (k < cc.cliqueCoverIterations(1, 2, lastPerm)) {
+                totalBranchCutsCC++;
+                totalTimeCC += System.nanoTime() - time;
+                return null;
+            }
+            lastPerm = cc.permutation;
             totalTimeCC += System.nanoTime() - time;
-            return null;
         }
-        lastPerm = cc.permutation;
-        totalTimeCC += System.nanoTime() - time;
         LinkedList<Node> S = new LinkedList<Node>();
         LinkedList<Node> neighbours = new LinkedList<>();
         Node v;

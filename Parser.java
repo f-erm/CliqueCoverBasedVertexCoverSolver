@@ -46,7 +46,7 @@ public class Parser {
         LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
         Collections.sort(ll);
         g.oldNodeList = ll;
-        //Reduction.removeDegreeOne(g);
+        Reduction.removeDegreeOne(g);
         //convert list of OldNodes into array of Nodes
         g.nodeArray = new Node[g.oldNodeList.size()];
         int j = 0;
