@@ -33,7 +33,7 @@ public class Algorithms {
         cc = new CliqueCover(G);
         int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100, 6, null)) + G.partialSolution.size();
         while (true) {
-            //if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
+            if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
             System.out.println("# k is " + k);
             System.out.println("# recursiveSteps " + recursiveSteps);
             LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, null);
