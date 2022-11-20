@@ -11,6 +11,7 @@ public class Algorithms {
     int totalBranchCutsCC = 0;
     boolean doCliqueCover = true;
     int ProcCount;
+    LinkedList<Integer> bestPermutation;
     ThreadPoolExecutor exec;
     CliqueCover cc;
     boolean WeWannaThreatYo = false;
@@ -31,12 +32,22 @@ public class Algorithms {
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
         cc = new CliqueCover(G);
-        int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100, 6, null)) + G.partialSolution.size();
+        cc.cliqueCoverIterations(10, 5, null);
+        bestPermutation = cc.permutation;
+        int bestLowerBound = cc.lowerBound;
+        for (int i = 0; i < 50; i++){
+            cc.cliqueCoverIterations(10, 5, null);
+            if (cc.lowerBound > bestLowerBound){
+                bestLowerBound = cc.lowerBound;
+                bestPermutation = cc.permutation;
+            }
+        }
+        int k = Math.max(hk.lastLowerBound, bestLowerBound) + G.partialSolution.size();
         while (true) {
             if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
             System.out.println("# k is " + k);
             System.out.println("# recursiveSteps " + recursiveSteps);
-            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, null);
+            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, bestPermutation);
             if (S != null) {
                 S.addAll(G.partialSolution);
                 if (WeWannaThreatYo) exec.shutdown();
