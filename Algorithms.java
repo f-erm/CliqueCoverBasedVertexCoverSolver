@@ -33,7 +33,7 @@ public class Algorithms {
         cc = new CliqueCover(G);
         int k = Math.max(hk.lastLowerBound, cc.cliqueCoverIterations(100, 6, null)) + G.partialSolution.size();
         while (true) {
-            //if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
+            if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
             System.out.println("# k is " + k);
             System.out.println("# recursiveSteps " + recursiveSteps);
             LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, null);
@@ -118,7 +118,13 @@ public class Algorithms {
             if(WeWannaThreatYo) {
                 if (exec.getActiveCount() < ProcCount) {//we can thread
                     threaded = true;
-                    Sthread = exec.submit(new Worker((Graph) G.clone(), k - neighbours.size(), (HopcroftKarp) hk.clone(), firstActiveNode, this));
+                    LinkedList<Integer> lastPerm_copy;
+                    if (lastPerm==null){
+                        lastPerm_copy = null;
+                    }else{
+                        lastPerm_copy = (LinkedList<Integer>) lastPerm.clone();
+                    }
+                    Sthread = exec.submit(new Worker((Graph) G.clone(), k - neighbours.size(), (HopcroftKarp) hk.clone(), firstActiveNode, this, lastPerm_copy));
                 } else {
                     S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm); //the returned cover
                 }

@@ -12,12 +12,13 @@ public class Worker implements Callable {
     LinkedList<Integer> lastPerm;
     int firstActiveNode;
 
-    public Worker(Graph G, int k, HopcroftKarp hk,int firstActiveNode, Algorithms Alg){
+    public Worker(Graph G, int k, HopcroftKarp hk,int firstActiveNode, Algorithms Alg, LinkedList<Integer> lastPerm){
         this.G = G;
         this.k = k;
         this.hk = hk;
         this.firstActiveNode = firstActiveNode;
         this.Alg = Alg;
+        this.lastPerm = lastPerm;
 
     }
 

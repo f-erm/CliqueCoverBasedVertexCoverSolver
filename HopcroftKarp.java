@@ -232,6 +232,7 @@ public class HopcroftKarp implements Cloneable {
         HKn.dists = (Stack<int[]>) this.dists.clone();
         HKn.numLastLowerBound = (Stack<Integer>) this.numLastLowerBound.clone();
         HKn.B = (Graph) this.B.clone();
+        HKn.totalCycleLB = this.totalCycleLB;
          
         return HKn;
     }

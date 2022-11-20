@@ -4,9 +4,9 @@ import java.util.LinkedList;
 public class Main {
     public static void main(String[] args) {
         long startTime = System.nanoTime();
-        boolean inputFromFile = false; //set to true for file input, false for autograder
+        boolean inputFromFile = true; //set to true for file input, false for autograder
         Graph G;
-        if (inputFromFile) G = Parser.parseGraph("../Algorithm Engineering/2-social-networks/05-football.graph.dimacs");
+        if (inputFromFile) G = Parser.parseGraph("/Users/ferdinand/Uni/AlgEng/vc-data-students/2-social-networks/05-football.graph.dimacs");
         else G = Parser.parseGraph();
         //
         Algorithms a = new Algorithms();
