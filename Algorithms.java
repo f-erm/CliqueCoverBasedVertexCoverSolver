@@ -118,8 +118,8 @@ public class Algorithms {
 
         //Branch for deleting all neighbors
         if (k >= v.activeNeighbours && v.activeNeighbours > 0){
-            for (int[] u: v.neighbours) {
-                Node toDelete = G.nodeArray[u[0]];
+            for (int u: v.neighbours) {
+                Node toDelete = G.nodeArray[u];
                 if (toDelete.active){
                     neighbours.add(toDelete);
                     G.removeNode(toDelete);
