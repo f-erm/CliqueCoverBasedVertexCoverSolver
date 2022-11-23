@@ -1,7 +1,7 @@
 public class Node implements Comparable<Node>, Cloneable{
     String name;
     int id;
-    int[] neighbours;//neighbours[0] is id of all the neighbors of this node,  neighburs[1] is index in the given neighboor's array where our current node can be found.
+    int[] neighbours;
     boolean active;
     int activeNeighbours;
 
@@ -19,8 +19,7 @@ public class Node implements Comparable<Node>, Cloneable{
         neighbours = new int[activeNeighbours];
         int i = 0;
         for (OldNode n : oldNode.neighbors) {
-            neighbours[i] = n.id;
-            neighbours[i++] = n.neighbors.indexOf(oldNode);
+            neighbours[i++] = n.id;
         }
     }
 

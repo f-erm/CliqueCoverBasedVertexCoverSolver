@@ -189,32 +189,29 @@ public class Algorithms {
      */
     public LinkedList<Node> solveSimpleGraph(Graph G, int k){
         if (k < 0) return null;
-        for (Node node : G.nodeArray){
-            if (!node.active) continue;
-            if (node.activeNeighbours > 1){
-                G.removeNode(node);
-                LinkedList<Node> S = solveSimpleGraph(G, k - 1);
-                recursiveSteps++;
-                G.reeaddNode(node);
-                if (S != null){
-                    S.add(node);
+        LinkedList<Node> S = new LinkedList<>();
+        LinkedList<Node> remember = new LinkedList<>();
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (Node node : G.nodeArray) {
+                if (!node.active) continue;
+                if (k < 0) {
+                    for (Node n : remember) G.reeaddNode(n);
+                    return null;
                 }
-                return S;
+                if (node.activeNeighbours == 1) {
+                    changed = true;
+                    S.add(G.nodeArray[node.neighbours[0]]);
+                    remember.add(node);
+                    G.removeNode(node);
+                    remember.add(G.nodeArray[node.neighbours[0]]);
+                    G.removeNode(G.nodeArray[node.neighbours[0]]);
+                    k--;
+                }
             }
         }
-        for (Node node : G.nodeArray){
-            if (!node.active) continue;
-            if (node.activeNeighbours > 0){
-                G.removeNode(node);
-                LinkedList<Node> S = solveSimpleGraph(G, k - 1);
-                recursiveSteps++;
-                G.reeaddNode(node);
-                if (S != null){
-                    S.add(node);
-                }
-                return S;
-            }
-        }
+        for (Node n : remember) G.reeaddNode(n);
         return new LinkedList<>();
     }
 
