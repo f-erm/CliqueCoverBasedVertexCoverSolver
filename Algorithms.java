@@ -38,7 +38,6 @@ public class Algorithms {
         for (int i = 0; i < 250; i++){
             cc.cliqueCoverIterations(10, 5, null);
             if (cc.lowerBound > bestLowerBound){
-                System.out.println(i);
                 bestLowerBound = cc.lowerBound;
                 bestPermutation = cc.permutation;
             }
