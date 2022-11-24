@@ -14,8 +14,23 @@ public class Reduction {
         this.G = G;
         removedNodes.push(new int[]{0});
     }
+    public void removeDegreeLargerKAndZero(Graph G, int k){
+        LinkedList<Node> partialSolution = new LinkedList<>();
+        for (Node node : G.nodeArray){
+            if (node.activeNeighbours > k){
+                partialSolution.add(node);
+                G.removeNode(node);
+                removedNodes.push(new int[]{2,node.id});
+            }
+            else if (node.activeNeighbours == 0){
+                G.removeNode(node);
+                removedNodes.push(new int[]{1, node.id});
+            }
+        }
+        G.partialSolution.addAll(partialSolution);
+    }
 
-    public void revertReduction(){
+    public void revertReduction() {
         int[] action = removedNodes.pop();
         while (action[0] != 0) {
             Node node = G.nodeArray[action[1]];
@@ -29,8 +44,8 @@ public class Reduction {
                     break;
             }
             action = removedNodes.pop();
+        }
     }
-
         
 
     public LinkedList<Node> reduceThroughCC(CliqueCover cc, int k, Graph G){
@@ -41,8 +56,8 @@ public class Reduction {
                 Node v = G.nodeArray[nodeId];
                 if(v.active && v.activeNeighbours > 0 && v.activeNeighbours == (cc.colorclasses[i].size()-1)){
                     if (k >= v.activeNeighbours) {
-                        for (int[] u : v.neighbours) {
-                            Node toDelete = G.nodeArray[u[0]];
+                        for (int u : v.neighbours) {
+                            Node toDelete = G.nodeArray[u];
                             if (toDelete.active) {
                                 cliqueNeighbours.add(toDelete);
                                 k--;
@@ -60,14 +75,15 @@ public class Reduction {
             }
         }
         this.uselessNeighbours = uselessNeighbours;
-        this.VCNeighbours = cliqueNeighbours;
+        this.VCNodes = cliqueNeighbours;
+        return null;
     }
 
     public void revertReduceCC(Graph G){
         for (Node node: uselessNeighbours) {
             G.reeaddNode(node);
         }
-        for (Node node: VCNeighbours) {
+        for (Node node: VCNodes) {
             G.reeaddNode(node);
         }
     }
@@ -80,7 +96,7 @@ public class Reduction {
 
     private void removeVCNodes(Node node){
         removedNodes.push(new int[]{2, node.id});
-        VCNeighbours.add(node);
+        VCNodes.add(node);
         G.removeNode(node);
     }
 
