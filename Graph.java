@@ -38,7 +38,7 @@ public class Graph implements Cloneable{
     public void removeNode(Node n){
         n.active = false;
         for (int i = 0; i < n.neighbours.length; i++){
-            nodeArray[n.neighbours[i][0]].activeNeighbours--;
+            nodeArray[n.neighbours[i]].activeNeighbours--;
         }
         totalEdges = totalEdges - n.activeNeighbours;
         activeNodes --;
@@ -51,7 +51,7 @@ public class Graph implements Cloneable{
     public void reeaddNode(Node n){
         n.active = true;
         for (int i = 0; i < n.neighbours.length; i++){
-            nodeArray[n.neighbours[i][0]].activeNeighbours++;
+            nodeArray[n.neighbours[i]].activeNeighbours++;
         }
         totalEdges += n.activeNeighbours;
         activeNodes ++;

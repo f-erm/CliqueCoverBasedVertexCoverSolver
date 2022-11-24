@@ -39,15 +39,11 @@ public class HopcroftKarp implements Cloneable {
                 right.active = false;
             }
             for (int i = 0; i < node.neighbours.length; i++) {
-                left.neighbours[i][0] = node.neighbours[i][0] + size;
-                left.neighbours[i][1] = node.neighbours[i][1];
-                right.neighbours[i][0] = node.neighbours[i][0];
-                right.neighbours[i][1] = node.neighbours[i][1];
+                left.neighbours[i] = node.neighbours[i] + size;
+                right.neighbours[i] = node.neighbours[i];
             }
-            right.neighbours[right.neighbours.length - 1][0] = nil;
-            right.neighbours[right.neighbours.length - 1][1] = node.id;
-            nilNode.neighbours[node.id][0] = node.id;
-            nilNode.neighbours[node.id][1] = nil;
+            right.neighbours[right.neighbours.length - 1] = nil;
+            nilNode.neighbours[node.id] = node.id;
             B.nodeArray[left.id] = left;
             B.nodeArray[right.id] = right;
         }
@@ -82,8 +78,8 @@ public class HopcroftKarp implements Cloneable {
         while (!Q.isEmpty()) {
             Node u = Q.poll();
             if (dist[u.id] < dist[nil]) {
-                for (int[] neighbourInfo : u.neighbours) {
-                    Node v = B.nodeArray[neighbourInfo[0]];
+                for (int neighbourInfo : u.neighbours) {
+                    Node v = B.nodeArray[neighbourInfo];
                     if (dist[pair[v.id]] == Integer.MAX_VALUE && v.active) {
                         dist[pair[v.id]] = dist[u.id] + 1;
                         Q.add(B.nodeArray[pair[v.id]]);
@@ -106,8 +102,8 @@ public class HopcroftKarp implements Cloneable {
      */
     boolean dfs(Node u) {
         if (u.id != nil) {
-            for (int[] neighbourInfo : u.neighbours) {
-                Node v = B.nodeArray[neighbourInfo[0]];
+            for (int neighbourInfo : u.neighbours) {
+                Node v = B.nodeArray[neighbourInfo];
                 if (dist[pair[v.id]] == dist[u.id] + 1 && v.active) {
                     if (dfs(B.nodeArray[pair[v.id]])) {
                         actions.push(new int[]{1,u.id,pair[u.id],v.id,pair[v.id]});

@@ -51,25 +51,25 @@ public class CliqueCover {
             //for all neighbors that are active and colored decrement that color
             int remember = -1;
             boolean createNewClass = true;
-            for (int[] neighbourInfo: myNode.neighbours) {
-                Node neighbour = G.nodeArray[neighbourInfo[0]];
+            for (int neighbourInfo: myNode.neighbours) {
+                Node neighbour = G.nodeArray[neighbourInfo];
                 if (!neighbour.active || neighbour.color==-1) continue;
                 colorcounts[neighbour.color] --;
                 if (colorcounts[neighbour.color] == 0){
                     colorclasses[neighbour.color].add(myNode.id);
                     myNode.color = neighbour.color;
                     colorcounts[neighbour.color]++;
-                    remember = neighbourInfo[0];
+                    remember = neighbourInfo;
                     createNewClass = false;
                     break;
                 }
 
             }
-            for (int[] neighbourInfo : myNode.neighbours){
-                Node neighbour = G.nodeArray[neighbourInfo[0]];
+            for (int neighbourInfo : myNode.neighbours){
+                Node neighbour = G.nodeArray[neighbourInfo];
                 if (!neighbour.active || neighbour.color==-1) continue;
                 colorcounts[neighbour.color] ++;
-                if (remember == neighbourInfo[0]) break;
+                if (remember == neighbourInfo) break;
             }
             if (createNewClass) {
                 LinkedList<Integer> ll = new LinkedList<>();
