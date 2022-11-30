@@ -24,6 +24,7 @@ public class Reduction {
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
         removeDegreeOne();
+        removeDegreeZero();
         return VCNodes.size() - oldK;
     }
     public void removeDegreeLargerKAndZero(Graph G, int k){
@@ -84,6 +85,14 @@ public class Reduction {
             }
         }
     }
+
+    private void removeDegreeZero(){
+        for (Node node : G.nodeArray) {
+            if(node.activeNeighbours == 0 && node.active){
+                removeUselessNodes(node);
+            }
+        }
+    }
         
 
     public LinkedList<Node> reduceThroughCC(CliqueCover cc, int k, Graph G){
@@ -125,6 +134,8 @@ public class Reduction {
             G.reeaddNode(node);
         }
     }
+
+
 
 
     private void removeUselessNodes(Node node){
