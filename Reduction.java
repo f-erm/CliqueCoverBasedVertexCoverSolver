@@ -1,6 +1,9 @@
 import java.util.LinkedList;
 import java.util.Stack;
 
+
+
+
 public class Reduction {
 
     LinkedList<Node> uselessNeighbours;
@@ -100,7 +103,78 @@ public class Reduction {
         G.removeNode(node);
     }
 
+    private boolean unconfined(Graph G, int v){
+        //input: G und index von v, output: v unconfined?
+        LinkedList<Integer> S = new LinkedList<Integer>();
+        S.add(v);
+        LinkedList<Integer> N_S = new LinkedList<Integer>();
+        for(Integer i : G.nodeArray[v].neighbours) N_S.add(v);//N_S = N(v)
+        Integer final_u = null; //the current best u
+        LinkedList<Integer> final_u_Cut = new LinkedList<Integer>(); //N(u) \ N(S) for current u and S
+        while(true){
+            for(Integer u : N_S){
+                LinkedList<Integer> N_u = new LinkedList<>();
+                for (Integer i : G.nodeArray[u].neighbours) N_u.add(i);
+                if (CheckSizeOfCut(G.nodeArray[u].neighbours, S)){
+                    if (final_u == null){//the first node that satisfied |N(u) \cap S| = 1
+                        final_u = u;
+                        final_u_Cut = GetSizeSetminus(N_u, N_S, Integer.MAX_VALUE);
+                    }
+                    else{//the other nodes
+                        LinkedList<Integer> res = GetSizeSetminus(N_u, N_S, final_u_Cut.size());
+                        if (res.size() < final_u_Cut.size()){
+                            final_u = u;
+                            final_u_Cut = res;
+                        }
+                    }
+                }
+            }
+            //evaluate N(u) \cap S
+            if (final_u==null) return false;
+            if (final_u_Cut.size()==0) return true;
+            if (final_u_Cut.size()==1) {
+                Integer w = final_u_Cut.get(0);
+                S.add(w);
+                for (Integer i : G.nodeArray[w].neighbours) {
+                    if(!N_S.contains(i)){//wir wollen keine Doppelungen
+                        N_S.add(i);
+                    }
+                }
+                continue;
+            }
+            return false;
+        }
+    }
 
+    private boolean CheckSizeOfCut(int[] N_u, LinkedList<Integer> S){
+        //Helper function of unconfined. Returns true if N_u \cap S = 1
+        boolean found_one = false;
+        for (Integer i : N_u ){
+            if (S.contains(i)){
+                if (found_one){
+                    return false;
+                }else{
+                found_one = true;
+                }
+            }
+        }
+        return found_one;
+    }
 
-
+    private LinkedList<Integer> GetSizeSetminus(LinkedList<Integer> N_u, LinkedList<Integer> N_S, Integer tobeat){
+        /*resturns Rest = N_u \ N_S . Stops if Rest.size > tobeat. If lookingforW ist set to true, we are calling the 
+        function with intention of checking wether R = {w} for some w. Therefore we can stop if |Rest| > 1. */
+        LinkedList<Integer> Rest = new LinkedList<Integer>();
+        for (Integer i : N_u){
+            if (!N_S.contains(i)) {
+                Rest.add(i);
+                if (Rest.size() > tobeat) return Rest;
+            }
+        }
+        return Rest;
+    }
 }
+
+
+
+
