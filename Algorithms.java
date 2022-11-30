@@ -53,6 +53,7 @@ public class Algorithms {
             if (S != null) {
                 S.addAll(reduction.VCNodes);
                 if (WeWannaThreatYo) exec.shutdown();
+                S.addAll(G.partialSolution);
                 return S;
             }
             if (reduction.removedNodes!= null && reduction.removedNodes.size() > 0) reduction.revertReduction(); // reverts first use of the reductions
@@ -74,7 +75,7 @@ public class Algorithms {
             LinkedList<Node> solution = new LinkedList<>();
             return solution;
         }
-        int l = reduction.rollOutAll();
+        int l = reduction.rollOutAll(k);
         k -= l;
         if (k < 0) return null;
         if (G.totalEdges == 0) {

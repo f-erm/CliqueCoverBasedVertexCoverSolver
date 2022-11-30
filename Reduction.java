@@ -22,11 +22,14 @@ public class Reduction {
 
     }
 
-    public int rollOutAll(){
+    public int rollOutAll(int k){
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
         removeDegreeOne();
         removeDegreeZero();
+        if (BussRule(k)){
+            return k+1;
+        }
         return VCNodes.size() - oldK;
     }
     public void improvedLP(Graph G){
@@ -180,6 +183,13 @@ public class Reduction {
                 removeUselessNodes(node);
             }
         }
+    }
+
+    private boolean BussRule(int k){
+        if (G.activeNodes > (k*k)+k || G.totalEdges > k*k){
+            return true;
+        }
+        return false;
     }
         
 
