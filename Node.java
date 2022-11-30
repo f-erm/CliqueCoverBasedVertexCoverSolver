@@ -1,10 +1,12 @@
+import java.util.LinkedList;
+
 public class Node implements Comparable<Node>, Cloneable{
     String name;
     int id;
     int[] neighbours;
     boolean active;
     int activeNeighbours;
-
+    LinkedList<int[]> mergeMagic;
     int color;
 
     /**
