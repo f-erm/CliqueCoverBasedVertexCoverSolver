@@ -9,10 +9,22 @@ public class Reduction {
     Stack<int[]> removedNodes;
 
     Graph G;
+    HopcroftKarp hk;
 
-    public void reduction(Graph G){
+    public Reduction(Graph G, HopcroftKarp hk){
         this.G = G;
+        VCNodes = new LinkedList<Node>();
+        uselessNeighbours = new LinkedList<Node>();
+        removedNodes = new Stack<>();
+        this. hk = hk;
+
+    }
+
+    public int rollOutAll(){
+        int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
+        removeDegreeOne();
+        return VCNodes.size() - oldK;
     }
     public void removeDegreeLargerKAndZero(Graph G, int k){
         LinkedList<Node> partialSolution = new LinkedList<>();
@@ -37,13 +49,39 @@ public class Reduction {
             switch (action[0]) {
                 case 1: // useless Nodes
                     G.reeaddNode(node);
+                    LinkedList<Node> a = new LinkedList<>();
+                    a.add(node);
+                    hk.updateAddNodes(a);
                     break;
                 case 2: //usefull Nodes
                     G.reeaddNode(node);
                     VCNodes.remove(node);
+                    LinkedList<Node> b = new LinkedList<>();
+                    b.add(node);
+                    hk.updateAddNodes(b);
                     break;
             }
             action = removedNodes.pop();
+        }
+    }
+
+    private void removeDegreeOne(){
+        boolean changed = true;
+        while (changed){
+            changed = false;
+            for (Node node : G.nodeArray) {
+                if(node.activeNeighbours == 1 && node.active){
+                    int i = 0;
+                    while (!G.nodeArray[node.neighbours[i]].active){
+                        i++;
+                    }
+                    Node neighbour = G.nodeArray[node.neighbours[i]];
+                    removeVCNodes(neighbour);
+                    removeUselessNodes(node);
+                    changed = true;
+                    break;
+                }
+            }
         }
     }
         
@@ -92,12 +130,18 @@ public class Reduction {
     private void removeUselessNodes(Node node){
         removedNodes.push(new int[]{1, node.id});
         G.removeNode(node);
+        LinkedList<Node> a = new LinkedList<>();
+        a.add(node);
+        hk.updateDeleteNodes(a);
     }
 
     private void removeVCNodes(Node node){
         removedNodes.push(new int[]{2, node.id});
         VCNodes.add(node);
         G.removeNode(node);
+        LinkedList<Node> a = new LinkedList<>();
+        a.add(node);
+        hk.updateDeleteNodes(a);
     }
 
 

@@ -10,6 +10,7 @@ public class Algorithms {
     int totalBranchCutsHK = 0;
     int totalBranchCutsCC = 0;
     boolean doCliqueCover = true;
+    Reduction reduction;
     int ProcCount;
     LinkedList<Integer> bestPermutation;
     ThreadPoolExecutor exec;
@@ -31,6 +32,7 @@ public class Algorithms {
      */
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
+        reduction = new Reduction(G, hk);
         cc = new CliqueCover(G);
         cc.cliqueCoverIterations(10, 5, null);
         bestPermutation = cc.permutation;
@@ -49,10 +51,11 @@ public class Algorithms {
             System.out.println("# recursiveSteps " + recursiveSteps);
             LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, bestPermutation);
             if (S != null) {
-                S.addAll(G.partialSolution);
+                S.addAll(reduction.VCNodes);
                 if (WeWannaThreatYo) exec.shutdown();
                 return S;
             }
+            if (reduction.removedNodes!= null && reduction.removedNodes.size() > 0) reduction.revertReduction(); // reverts first use of the reductions
             k++;
         }
     }
@@ -68,7 +71,15 @@ public class Algorithms {
         //Stop for edgeless G
         if (k < 0) return null;
         if (G.totalEdges == 0) {
-            return new LinkedList<>();
+            LinkedList<Node> solution = new LinkedList<>();
+            return solution;
+        }
+        int l = reduction.rollOutAll();
+        k -= l;
+        if (k < 0) return null;
+        if (G.totalEdges == 0) {
+            LinkedList<Node> solution = new LinkedList<>();
+            return solution;
         }
         long time = System.nanoTime();
         hk.searchForAMatching();
@@ -99,7 +110,7 @@ public class Algorithms {
             }
             //If delta(G) <= 2 there exists a simple solution. We check here and apply said solution
             v = G.nodeArray[firstActiveNode];
-            if (v.activeNeighbours < 3){
+            /*if (v.activeNeighbours < 3){
                 boolean graphIsSimple = true;
                 for (Node n : G.nodeArray){
                     if (n.active && n.activeNeighbours > 2) {
@@ -108,7 +119,7 @@ public class Algorithms {
                     }
                 }
                 if (graphIsSimple) return solveSimpleGraph(G, k);
-            }
+            }*/
             break;
         }
 
@@ -138,9 +149,15 @@ public class Algorithms {
                     Sthread = exec.submit(new Worker((Graph) G.clone(), k - neighbours.size(), (HopcroftKarp) hk.clone(), firstActiveNode, this, lastPerm_copy));
                 } else {
                     S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm); //the returned cover
+                    if(S==null){
+                        reduction.revertReduction();
+                    }
                 }
             }else{
                 S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm); //the returned cover
+                if(S==null){
+                    reduction.revertReduction();
+                }
             }
             recursiveSteps++;
             Collections.reverse(neighbours);
@@ -161,6 +178,9 @@ public class Algorithms {
         ll.add(v);
         hk.updateDeleteNodes(ll);
         S = vc_branch_nodes(G, k - 1, firstActiveNode,hk, lastPerm); //the returned cover
+        if(S==null){
+            reduction.revertReduction();
+        }
         recursiveSteps++;
         G.reeaddNode(v);
         hk.updateAddNodes(ll);
