@@ -34,6 +34,8 @@ public class Reduction {
         }
         return VCNodes.size() - oldK;
     }
+
+
     public void improvedLP(Graph G){
         HopcroftKarp hk = new HopcroftKarp(G);
         int size = hk.size;
@@ -197,9 +199,8 @@ public class Reduction {
     }
 
 
-    public LinkedList<Node> reduceThroughCC(CliqueCover cc, int k, Graph G){
+    public int reduceThroughCC(CliqueCover cc, int k, Graph G){
         LinkedList<Node> cliqueNeighbours = new LinkedList<>();
-        LinkedList<Node> uselessNeighbours = new LinkedList<>();
         for (int i = 0; i < cc.FirstFreeColor; i++) {
             for (Integer nodeId: cc.colorclasses[i]) {
                 Node v = G.nodeArray[nodeId];
@@ -208,36 +209,21 @@ public class Reduction {
                         for (int u : v.neighbours) {
                             Node toDelete = G.nodeArray[u];
                             if (toDelete.active) {
-                                cliqueNeighbours.add(toDelete);
+                                removeVCNodes(toDelete);
                                 k--;
-                                G.removeNode(toDelete);
                             }
                         }
                     }
                     else {
-                        return null;
+                        return -1;
                     }
-                    uselessNeighbours.add(v);
-                    G.removeNode(v);
+                    removeUselessNodes(v);
                     break;
                 }
             }
         }
-        this.uselessNeighbours = uselessNeighbours;
-        this.VCNodes = cliqueNeighbours;
-        return null;
+        return k;
     }
-
-    public void revertReduceCC(Graph G){
-        for (Node node: uselessNeighbours) {
-            G.reeaddNode(node);
-        }
-        for (Node node: VCNodes) {
-            G.reeaddNode(node);
-        }
-    }
-
-
 
 
     private void removeUselessNodes(Node node){

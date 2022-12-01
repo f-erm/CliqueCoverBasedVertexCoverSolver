@@ -41,8 +41,16 @@ public class Algorithms {
                 bestLowerBound = cc.lowerBound;
                 bestPermutation = cc.permutation;
             }
+
         }
         int k = Math.max(hk.lastLowerBound, bestLowerBound) + G.partialSolution.size();
+        k = reduction.reduceThroughCC(cc, k, G);
+
+        if (k < 0) return null;
+        if (G.totalEdges == 0) {
+            G.partialSolution.addAll(reduction.VCNodes);
+            return G.partialSolution;
+        }
         while (true) {
             if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
             System.out.println("# k is " + k);
@@ -100,6 +108,13 @@ public class Algorithms {
                 totalTimeCC += System.nanoTime() - time;
                 return null;
             }
+            k = reduction.reduceThroughCC(cc, k, G);
+
+            if (k < 0) return null;
+            if (G.totalEdges == 0) {
+                return new LinkedList<>();
+            }
+
             lastPerm = cc.permutation;
             totalTimeCC += System.nanoTime() - time;
         }
