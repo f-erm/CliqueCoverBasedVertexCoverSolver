@@ -2,6 +2,8 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
 import java.util.stream.IntStream;
+import java.util.Collections;
+import java.util.BitSet;
 
 
 
@@ -29,8 +31,10 @@ public class Reduction {
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
         removeDegreeOne();
+        applyUnconfined();
         return VCNodes.size() - oldK;
     }
+
     public void improvedLP(Graph G){
         HopcroftKarp hk = new HopcroftKarp(G);
         int size = hk.size;
@@ -265,26 +269,33 @@ public class Reduction {
         nodeA.mergeMagic.add(new int[]{nodeB.id, nodeC.id});
     }
 
-    private boolean unconfined(Graph G, int v){
-        //input: G und index von v, output: v unconfined?
+
+    private boolean new_unconfined(Integer v, BitSet N_S){
+        //check node for unconfined. Bitsset needs to be initialized to all zeros, all changes will be reverted in the end
         LinkedList<Integer> S = new LinkedList<Integer>();
         S.add(v);
-        LinkedList<Integer> N_S = new LinkedList<Integer>();
-        for(Integer i : G.nodeArray[v].neighbours) N_S.add(v);//N_S = N(v)
-        Integer final_u = null; //the current best u
-        LinkedList<Integer> final_u_Cut = new LinkedList<Integer>(); //N(u) \ N(S) for current u and S
-        while(true){
-            for(Integer u : N_S){
-                LinkedList<Integer> N_u = new LinkedList<>();
-                for (Integer i : G.nodeArray[u].neighbours) N_u.add(i);
-                if (CheckSizeOfCut(G.nodeArray[u].neighbours, S)){
-                    if (final_u == null){//the first node that satisfied |N(u) \cap S| = 1
+        LinkedList<Integer> N_S_aslist = new LinkedList<Integer>();
+        N_S.set(v);
+        N_S_aslist.add(v);
+        for(int i : G.nodeArray[v].neighbours){
+            if(G.nodeArray[i].active){
+                N_S.set(i);
+                N_S_aslist.add(i);
+            }
+        }
+        Integer[] final_u_Cut = new Integer[2];
+        final_u_Cut[0] = 0;
+        final_u_Cut[1] = 0;
+        while (true) {
+            Integer final_u = null; //the current best u
+            for(Integer u : N_S_aslist){
+                if (checkCutSize(u,S)){
+                    if (final_u == null){
                         final_u = u;
-                        final_u_Cut = GetSizeSetminus(N_u, N_S, Integer.MAX_VALUE);
-                    }
-                    else{//the other nodes
-                        LinkedList<Integer> res = GetSizeSetminus(N_u, N_S, final_u_Cut.size());
-                        if (res.size() < final_u_Cut.size()){
+                        final_u_Cut = getSetminus(u, N_S, Integer.MAX_VALUE);
+                    }else{
+                        Integer[] res = getSetminus(u, N_S, final_u_Cut[0]);
+                        if (res[0] < final_u_Cut[0]){
                             final_u = u;
                             final_u_Cut = res;
                         }
@@ -292,50 +303,98 @@ public class Reduction {
                 }
             }
             //evaluate N(u) \cap S
-            if (final_u==null) return false;
-            if (final_u_Cut.size()==0) return true;
-            if (final_u_Cut.size()==1) {
-                Integer w = final_u_Cut.get(0);
+            if (final_u==null) {reset_bitset(N_S, N_S_aslist); return false;}
+            if (final_u_Cut[0]==0) {reset_bitset(N_S, N_S_aslist); return true;}
+            if (final_u_Cut[0]==1) {
+                Integer w = final_u_Cut[1];
                 S.add(w);
+                N_S.set(w);
+                N_S_aslist.add(w);
                 for (Integer i : G.nodeArray[w].neighbours) {
-                    if(!N_S.contains(i)){//wir wollen keine Doppelungen
-                        N_S.add(i);
+                    if(G.nodeArray[i].active && !N_S.get(i)) {
+                        N_S.set(i);
+                        N_S_aslist.add(i);
                     }
                 }
+                final_u = null;
                 continue;
             }
+            reset_bitset(N_S, N_S_aslist);
             return false;
         }
     }
 
-    private boolean CheckSizeOfCut(int[] N_u, LinkedList<Integer> S){
-        //Helper function of unconfined. Returns true if N_u \cap S = 1
+    private boolean checkCutSize(int u , LinkedList<Integer> S){
+        //check if N(u) cap S = 1
+        int[] N_u = G.nodeArray[u].neighbours;
         boolean found_one = false;
         for (Integer i : N_u ){
-            if (S.contains(i)){
-                if (found_one){
-                    return false;
-                }else{
-                found_one = true;
-                }
+            if (G.nodeArray[i].active && S.contains(i)){
+                if (found_one){return false;}
+                else{found_one = true;}
             }
         }
         return found_one;
     }
 
-    private LinkedList<Integer> GetSizeSetminus(LinkedList<Integer> N_u, LinkedList<Integer> N_S, Integer tobeat){
-        /*resturns Rest = N_u \ N_S . Stops if Rest.size > tobeat. If lookingforW ist set to true, we are calling the 
-        function with intention of checking wether R = {w} for some w. Therefore we can stop if |Rest| > 1. */
-        LinkedList<Integer> Rest = new LinkedList<Integer>();
-        for (Integer i : N_u){
-            if (!N_S.contains(i)) {
-                Rest.add(i);
-                if (Rest.size() > tobeat) return Rest;
+    private void reset_bitset(BitSet B, LinkedList<Integer> L){
+        //reset the bitsset to all zeros
+        for (Integer i : L) B.clear(i);
+    }
+
+    private Integer[] getSetminus(int u, BitSet B,int tobeat){
+        //returns size of N(u) \ B in res[0], one of the elements in N(u) \ B in res[1]. Stops if result is bigger than tobeat
+        int[] N_u = G.nodeArray[u].neighbours;
+        int count = 0;
+        Integer[] res = new Integer[2];
+        for (Integer i : N_u ){
+            if (G.nodeArray[i].active && !B.get(i)){
+                res[1] = i;
+                count ++;
+                if(count > tobeat) break;
             }
         }
-        return Rest;
+        res[0] = count;
+        return res;
     }
+
+    
+    private void applyUnconfined(){
+        //remove all unconfined nodes. also checks Neighbors of every removed node
+        BitSet N_S = new BitSet(G.nodeArray.length);
+        Queue<Integer> q = new LinkedList<>();
+        boolean[] checked = new boolean[G.nodeArray.length];
+        for(int i=0;i< G.nodeArray.length;i++){//geht das besser?
+            if (G.nodeArray[i].active && new_unconfined(i,N_S)) {
+                removeVCNodes(G.nodeArray[i]);
+                for(Integer j : G.nodeArray[i].neighbours){
+                    q.offer(j);
+                }
+            }
+        }
+        while(!q.isEmpty()){
+            Integer elem = q.poll();
+            if (checked[elem]==true) continue;
+            //if (G.nodeArray[elem].active && unconfined(G, elem)) {
+            if (G.nodeArray[elem].active && new_unconfined(elem,N_S)) {
+                //System.out.println("unconfined");
+                removeVCNodes(G.nodeArray[elem]);
+                checked[elem] = true;
+                for(Integer j : G.nodeArray[elem].neighbours){
+                    if (G.nodeArray[j].active) q.offer(j);
+                }
+            }
+        }
+    }
+
+
+    
+
+
+
 }
+
+
 
 
 
