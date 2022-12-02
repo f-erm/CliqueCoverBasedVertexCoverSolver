@@ -12,7 +12,7 @@ public class Reduction {
 
     LinkedList<Node> uselessNeighbours;
     LinkedList<Node> VCNodes;
-
+    Stack<int[]> mergedNodes;
     Stack<int[]> removedNodes;
 
     Graph G;
@@ -20,20 +20,27 @@ public class Reduction {
 
     public Reduction(Graph G, HopcroftKarp hk){
         this.G = G;
-        VCNodes = new LinkedList<Node>();
-        uselessNeighbours = new LinkedList<Node>();
+        VCNodes = new LinkedList<>();
+        uselessNeighbours = new LinkedList<>();
         removedNodes = new Stack<>();
+        mergedNodes = new Stack<>();
         this. hk = hk;
 
     }
 
-    public int rollOutAll(){
+    public int rollOutAll(int k){
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
         removeDegreeOne();
         applyUnconfined();
+        removeDegreeTwo();
+        removeDegreeZero();
+        if (BussRule(k)){
+            return k+1;
+        }
         return VCNodes.size() - oldK;
     }
+
 
     public void improvedLP(Graph G){
         HopcroftKarp hk = new HopcroftKarp(G);
@@ -82,8 +89,7 @@ public class Reduction {
         }
     }
 
-    public void removeDegreeTwo(Graph Gr, int k){
-        removedNodes.push(new int[]{0});
+    public void removeDegreeTwo(){
         for (Node node : G.nodeArray){
             if (node.active && node.activeNeighbours == 2){
                 Node first = null, second = null;
@@ -96,7 +102,12 @@ public class Reduction {
                     Node current = G.nodeArray[node.neighbours[it++]];
                     if (current.active) second = current;
                 }
-                mergeNodes(first, second, node);
+                if (!arrayContains(first.neighbours, second.id)) mergeNodes(first, second, node); // case v,w \in E
+                else{ // case v,w \not \in E
+                    removeUselessNodes(node);
+                    removeVCNodes(first);
+                    removeVCNodes(second);
+                }
             }
         }
     }
@@ -128,7 +139,7 @@ public class Reduction {
                     a.add(node);
                     hk.updateAddNodes(a);
                     break;
-                case 2: //usefull Nodes
+                case 2: //useful Nodes
                     G.reeaddNode(node);
                     VCNodes.remove(node);
                     LinkedList<Node> b = new LinkedList<>();
@@ -136,24 +147,25 @@ public class Reduction {
                     hk.updateAddNodes(b);
                     break;
                 case 3: //merged Nodes :(
-                    G.reeaddNode(G.nodeArray[action[3]]);
-                    G.reeaddNode(G.nodeArray[action[2]]);
                     VCNodes.remove(G.nodeArray[action[3]]);
                     int[] newArray = new int[node.neighbours.length - action[4]];
                     System.arraycopy(node.neighbours, 0, newArray, 0, newArray.length);
                     for (int i = newArray.length; i < node.neighbours.length; i++){
                         Node neighbour = G.nodeArray[node.neighbours[i]];
-                        for (int j = 0; i < neighbour.neighbours.length; i++){
+                        for (int j = 0; j < neighbour.neighbours.length; j++){
                             if (neighbour.neighbours[j] == node.id) {
                                 neighbour.neighbours[j] = action[2];
                                 neighbour.activeNeighbours--;
+                                G.totalEdges--;
                                 break;
                             }
                         }
                     }
                     node.neighbours = newArray;
-                    node.mergeMagic = null;
+                    mergedNodes.pop();
                     node.activeNeighbours -= action[4];
+                    G.reeaddNode(G.nodeArray[action[2]]);
+                    G.reeaddNode(G.nodeArray[action[3]]);
                     break;
             }
             action = removedNodes.pop();
@@ -179,11 +191,22 @@ public class Reduction {
             }
         }
     }
-        
 
-    public LinkedList<Node> reduceThroughCC(CliqueCover cc, int k, Graph G){
+    private void removeDegreeZero(){
+        for (Node node : G.nodeArray) {
+            if(node.activeNeighbours == 0 && node.active){
+                removeUselessNodes(node);
+            }
+        }
+    }
+
+    private boolean BussRule(int k){
+        return (G.activeNodes > (k * k) + k || G.totalEdges > k * k);
+    }
+
+
+    public int reduceThroughCC(CliqueCover cc, int k, Graph G){
         LinkedList<Node> cliqueNeighbours = new LinkedList<>();
-        LinkedList<Node> uselessNeighbours = new LinkedList<>();
         for (int i = 0; i < cc.FirstFreeColor; i++) {
             for (Integer nodeId: cc.colorclasses[i]) {
                 Node v = G.nodeArray[nodeId];
@@ -192,33 +215,20 @@ public class Reduction {
                         for (int u : v.neighbours) {
                             Node toDelete = G.nodeArray[u];
                             if (toDelete.active) {
-                                cliqueNeighbours.add(toDelete);
+                                removeVCNodes(toDelete);
                                 k--;
-                                G.removeNode(toDelete);
                             }
                         }
                     }
                     else {
-                        return null;
+                        return -1;
                     }
-                    uselessNeighbours.add(v);
-                    G.removeNode(v);
+                    removeUselessNodes(v);
                     break;
                 }
             }
         }
-        this.uselessNeighbours = uselessNeighbours;
-        this.VCNodes = cliqueNeighbours;
-        return null;
-    }
-
-    public void revertReduceCC(Graph G){
-        for (Node node: uselessNeighbours) {
-            G.reeaddNode(node);
-        }
-        for (Node node: VCNodes) {
-            G.reeaddNode(node);
-        }
+        return k;
     }
 
 
@@ -238,6 +248,14 @@ public class Reduction {
         a.add(node);
         hk.updateDeleteNodes(a);
     }
+
+    /**
+     * @param nodeA node to be merged and to remain active
+     * @param nodeB node to be merged into nodeA
+     * @param nodeC node with two neighbours nodeA and nodeB
+     *              merges nodeB into nodeA, adds nodeC to the vertex cover and saves the action
+     *              (Array resizing is done here!)
+     */
     private void mergeNodes(Node nodeA, Node nodeB, Node nodeC){
         LinkedList<Integer> addedNeighbours = new LinkedList<>();
         G.removeNode(nodeC);
@@ -245,12 +263,13 @@ public class Reduction {
         VCNodes.add(nodeC);
         for (int n : nodeB.neighbours){
             Node neighbour = G.nodeArray[n];
-            if (neighbour.active && IntStream.of(nodeA.neighbours).noneMatch(x -> x == n) && neighbour != nodeA){
+            if (neighbour.active && IntStream.of(nodeA.neighbours).noneMatch(x -> x == n)){
                 addedNeighbours.add(n);
                 for (int i = 0; i < neighbour.neighbours.length; i++){
                     if (neighbour.neighbours[i] == nodeB.id) {
                         neighbour.neighbours[i] = nodeA.id;
                         neighbour.activeNeighbours++;
+                        G.totalEdges++;
                         break;
                     }
                 }
@@ -264,10 +283,14 @@ public class Reduction {
         }
         nodeA.neighbours = newArray;
         removedNodes.push(new int[]{3, nodeA.id, nodeB.id, nodeC.id, addedNeighbours.size()});
-        if (nodeA.mergeMagic == null) nodeA.mergeMagic = new LinkedList<>();
         nodeA.activeNeighbours += addedNeighbours.size();
-        nodeA.mergeMagic.add(new int[]{nodeB.id, nodeC.id});
+        mergedNodes.push(new int[]{nodeA.id, nodeB.id, nodeC.id});
     }
+
+    private boolean arrayContains(int[] array, int el){
+        for (int i : array) if (i == el) return true;
+        return false;
+        }
 
 
     private boolean new_unconfined(Integer v, BitSet N_S){
@@ -388,7 +411,7 @@ public class Reduction {
     }
 
 
-    
+            
 
 
 

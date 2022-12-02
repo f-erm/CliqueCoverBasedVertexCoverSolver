@@ -1,9 +1,7 @@
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.concurrent.*;
-
 public class Algorithms {
-
     int recursiveSteps;
     long totalTimeHK = 0;
     long totalTimeCC = 0;
@@ -43,8 +41,16 @@ public class Algorithms {
                 bestLowerBound = cc.lowerBound;
                 bestPermutation = cc.permutation;
             }
+
         }
         int k = Math.max(hk.lastLowerBound, bestLowerBound) + G.partialSolution.size();
+        k = reduction.reduceThroughCC(cc, k, G);
+
+        if (k < 0) return null;
+        if (G.totalEdges == 0) {
+            G.partialSolution.addAll(reduction.VCNodes);
+            return G.partialSolution;
+        }
         while (true) {
             if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
             System.out.println("# k is " + k);
@@ -52,7 +58,15 @@ public class Algorithms {
             LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, bestPermutation);
             if (S != null) {
                 S.addAll(reduction.VCNodes);
+                while (!reduction.mergedNodes.isEmpty()){
+                    int[] merge = reduction.mergedNodes.pop();
+                    if (S.contains(G.nodeArray[merge[0]])){
+                        S.add(G.nodeArray[merge[1]]);
+                        S.remove(G.nodeArray[merge[2]]);
+                    }
+                }
                 if (WeWannaThreatYo) exec.shutdown();
+                S.addAll(G.partialSolution);
                 return S;
             }
             if (reduction.removedNodes!= null && reduction.removedNodes.size() > 0) reduction.revertReduction(); // reverts first use of the reductions
@@ -71,23 +85,21 @@ public class Algorithms {
         //Stop for edgeless G
         if (k < 0) return null;
         if (G.totalEdges == 0) {
-            LinkedList<Node> solution = new LinkedList<>();
-            return solution;
+            return new LinkedList<>();
         }
-        int l = reduction.rollOutAll();
+        int l = reduction.rollOutAll(k);
         k -= l;
         if (k < 0) return null;
         if (G.totalEdges == 0) {
-            LinkedList<Node> solution = new LinkedList<>();
-            return solution;
+            return new LinkedList<>();
         }
         long time = System.nanoTime();
         hk.searchForAMatching();
         totalTimeHK += System.nanoTime() - time;
-        if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
+        /*if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
             totalBranchCutsHK++;
             return null;
-        }
+        }*/
         time = System.nanoTime();
         if (doCliqueCover) {
             cc = new CliqueCover(G);
@@ -96,10 +108,17 @@ public class Algorithms {
                 totalTimeCC += System.nanoTime() - time;
                 return null;
             }
+            k = reduction.reduceThroughCC(cc, k, G);
+
+            if (k < 0) return null;
+            if (G.totalEdges == 0) {
+                return new LinkedList<>();
+            }
+
             lastPerm = cc.permutation;
             totalTimeCC += System.nanoTime() - time;
         }
-        LinkedList<Node> S = new LinkedList<Node>();
+        LinkedList<Node> S = new LinkedList<>();
         LinkedList<Node> neighbours = new LinkedList<>();
         Node v;
         while (true) {
@@ -125,7 +144,7 @@ public class Algorithms {
 
 
         boolean threaded = false;
-        Future<LinkedList<Node>> Sthread = CompletableFuture.completedFuture(new LinkedList<Node>());//init empty future
+        Future<LinkedList<Node>> Sthread = CompletableFuture.completedFuture(new LinkedList<>());//init empty future
 
         //Branch for deleting all neighbors
         if (k >= v.activeNeighbours && v.activeNeighbours > 0){
