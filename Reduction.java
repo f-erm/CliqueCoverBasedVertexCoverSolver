@@ -87,6 +87,8 @@ public class Reduction {
             if (reachedFromS[i] && !reachedFromS[i + size]) removeUselessNodes(G.nodeArray[i]); //LP solution = 0
             else if (!reachedFromS[i] && reachedFromS[i + size]) removeVCNodes(G.nodeArray[i]); //LP solution = 1
         }
+        LinkedList<LinkedList<Node>> scc = StrongComponentsFinder.findStrongComponents(hk.B, residualGraph);
+
     }
 
     public void removeDegreeTwo(){
