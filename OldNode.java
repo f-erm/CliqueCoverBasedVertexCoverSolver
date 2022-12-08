@@ -5,7 +5,6 @@ public class OldNode implements Comparable<OldNode> {
 	String name;
 	LinkedList<OldNode> neighbors;
 	boolean active;
-
 	int id;
 
 	public OldNode(String name) {

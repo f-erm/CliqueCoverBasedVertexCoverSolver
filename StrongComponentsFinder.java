@@ -3,47 +3,67 @@ import java.util.LinkedList;
 import java.util.Stack;
 
 public class StrongComponentsFinder {
-    static int index = 0;
+    static int index;
+    static Stack<Integer> stack;
+    static LinkedList<LinkedList<Node>> allComponents;
+    static Graph B;
+    static LinkedList<Integer>[] residualGraph;
+    static int[] ccindex;
+    static int[] lowLink;
+    static boolean[] onStack;
 
-    public static LinkedList<LinkedList<Node>> findStrongComponents(Graph B, LinkedList<Integer>[] residualGraph){
-        Stack<Node> stack = new Stack<>();
-        LinkedList<LinkedList<Node>> allComponents= new LinkedList<>();
-        for (int i = 0; i < B.nodeArray.length; i++) {
+    public static LinkedList<LinkedList<Node>> findStrongComponents(Graph BIn, LinkedList<Integer>[] residualGraphIn){
+        stack = new Stack<>();
+        allComponents= new LinkedList<>();
+        B = BIn;
+        residualGraph = residualGraphIn;
+        index = 0;
+        ccindex = new int[B.nodeArray.length - 1];
+        lowLink = new int[B.nodeArray.length - 1];
+        onStack = new boolean[B.nodeArray.length - 1];
+        for (int i = 0; i < ccindex.length; i++){
+            ccindex[i] = -1;
+            lowLink[i] = -1;
+        }
+        for (int i = 0; i < B.nodeArray.length - 1; i++) {
             Node node = B.nodeArray[i];
-            if (node.active && node.ccindex == -1 ){
-                strongConnect(node, stack,allComponents,B,residualGraph);
+            if (node.active && ccindex[i] == -1){
+                strongConnect(node);
             }
         }
-        return checkZulaessig(allComponents, B);
+        return checkZulaessig();
     }
 
-    private static void strongConnect(Node node, Stack<Node> stack,LinkedList<LinkedList<Node>> allComponents, Graph B, LinkedList<Integer>[] residualGraph){
-        node.ccindex = index;
-        node.lowLink = index;
+    private static void strongConnect(Node node){
+        if (node.id > B.nodeArray.length - 2) return;
+        ccindex[node.id] = index;
+        lowLink[node.id] = index;
         index ++;
-        stack.push(node);
-        node.onStack = true;
+        stack.push(node.id);
+        onStack[node.id] = true;
 
         for (int neighbourID : residualGraph[node.id]) {
+            if (neighbourID > B.nodeArray.length - 2 ||!B.nodeArray[neighbourID].active) continue;
             Node neighbour = B.nodeArray[neighbourID];
-            if (!neighbour.active) continue;
-            if (neighbour.ccindex == -1){
-                strongConnect(neighbour, stack, allComponents, B, residualGraph);
-                node.lowLink = min(node.lowLink, neighbour.lowLink);
+            if (ccindex[neighbourID] == -1){
+                strongConnect(neighbour);
+                lowLink[node.id] = min(lowLink[node.id], lowLink[neighbourID]);
             }
-            else if (neighbour.onStack) {
-                node.lowLink = min(node.lowLink, neighbour.ccindex);
+            else if (onStack[neighbourID]) {
+                lowLink[node.id] = min(lowLink[node.id], ccindex[neighbourID]);
             }
         }
 
-        if (node.lowLink == node.ccindex){
+        if (lowLink[node.id] == ccindex[node.id]){
             LinkedList<Node> strongComponent = new LinkedList<>();
-            Node w = stack.pop();
-            w.onStack = false;
+            Integer integer = stack.pop();
+            Node w = B.nodeArray[integer];
+            onStack[integer] = false;
             strongComponent.add(w);
             while (w != node){
-                w = stack.pop();
-                w.onStack = false;
+                integer = stack.pop();
+                w = B.nodeArray[integer];
+                onStack[integer] = false;
                 strongComponent.add(w);
             }
             allComponents.add(strongComponent);
@@ -59,29 +79,37 @@ public class StrongComponentsFinder {
         else return b;
     }
 
-    private static LinkedList<LinkedList<Node>> checkZulaessig(LinkedList<LinkedList<Node>> allcomp, Graph B) {
+    private static LinkedList<LinkedList<Node>> checkZulaessig() {
         int size = B.nodeArray.length / 2;
         LinkedList<LinkedList<Node>> goodScc = new LinkedList<>();
         HashSet<Node> evilNodes = new HashSet<>();
-        for (LinkedList<Node> scc : allcomp) {
+        for (LinkedList<Node> scc : allComponents) {
+            boolean add = true;
             HashSet<Integer> hs = new HashSet<>();
             for (Node node : scc) {
                 int id = node.id;
                 if (id > size) id -= size;
                 if (!hs.add(id)){
                     evilNodes.addAll(scc);
+                    add = false;
                     break;
                 }
             }
             for (Node node : scc){
-                for (int neighbour : node.neighbours){
-                    if (evilNodes.contains(neighbour)){
+                for (int neighbour : residualGraph[node.id]){
+                    /*if (evilNodes.contains(neighbour)){
                         evilNodes.addAll(scc);
+                        break;*/
+                    if (neighbour > B.nodeArray.length - 2 || !B.nodeArray[neighbour].active) continue;
+                    Node neighbourNode = B.nodeArray[neighbour];
+                    if (!scc.contains(neighbourNode)){
+                        evilNodes.addAll(scc);
+                        add = false;
                         break;
                     }
                 }
             }
-            goodScc.add(scc);
+            if (add) goodScc.add(scc);
         }
         return goodScc;
     }

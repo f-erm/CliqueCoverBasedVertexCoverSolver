@@ -6,9 +6,6 @@ public class Node implements Comparable<Node>, Cloneable{
     int activeNeighbours;
     int color;
     //the next attributes are necessary to find the strong connected components
-    int ccindex;
-    int lowLink;
-    boolean onStack;
 
 
     /**
@@ -25,9 +22,6 @@ public class Node implements Comparable<Node>, Cloneable{
         for (OldNode n : oldNode.neighbors) {
             neighbours[i++] = n.id;
         }
-        ccindex = -1;
-        lowLink = -1;
-        onStack = false;
     }
 
     /**

@@ -1,12 +1,7 @@
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
-import java.util.stream.IntStream;
-import java.util.Collections;
 import java.util.BitSet;
-
-
-
 
 public class Reduction {
 
@@ -14,57 +9,100 @@ public class Reduction {
     LinkedList<Node> VCNodes;
     Stack<int[]> mergedNodes;
     Stack<int[]> removedNodes;
-
     Graph G;
     HopcroftKarp hk;
-
+    boolean merged;
+    Stack<Stack<int[]>> oldHopcrofts;
+    Stack<Stack<Integer>> oldMatchingNums;
+    long deg1Time = 0;
+    int deg1cuts = 0;
+    long deg2Time = 0;
+    int deg2cuts = 0;
+    long deg0Time = 0;
+    int deg0cuts = 0;
+    long unconfTime = 0;
+    int unconfcuts = 0;
+    long bussTime = 0;
+    int busscuts = 0;
+    long lpTime = 0;
+    int lpcuts = 0;
     public Reduction(Graph G, HopcroftKarp hk){
         this.G = G;
         VCNodes = new LinkedList<>();
         uselessNeighbours = new LinkedList<>();
         removedNodes = new Stack<>();
         mergedNodes = new Stack<>();
-        this. hk = hk;
-
+        this.hk = hk;
+        oldHopcrofts = new Stack<>();
+        oldMatchingNums = new Stack<>();
     }
 
     public int rollOutAll(int k){
+        merged = false;
+        for (int i = 0; i < G.nodeArray.length; i++) if (G.nodeArray[i].active != hk.B.nodeArray[i].active){
+            int als = 0;
+        }
+        long time = System.nanoTime();
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
         removeDegreeOne();
+        deg1Time += System.nanoTime() - time;
+        time = System.nanoTime();
         applyUnconfined();
+        unconfTime += System.nanoTime() - time;
+        time = System.nanoTime();
         removeDegreeTwo();
+        if (merged) {
+            oldHopcrofts.push(hk.actions);
+            oldMatchingNums.push(hk.numMatching);
+            hk = new HopcroftKarp(G);
+        }
+        deg2Time += System.nanoTime() - time;
+        time = System.nanoTime();
+        improvedLP(G);
+        lpTime += System.nanoTime() - time;
+        time = System.nanoTime();
         removeDegreeZero();
+        deg0Time += System.nanoTime() - time;
+        time = System.nanoTime();
         if (BussRule(k)){
+            busscuts++;
             return k+1;
         }
+        bussTime += System.nanoTime() - time;
+        time = System.nanoTime();
         return VCNodes.size() - oldK;
     }
 
 
     public void improvedLP(Graph G){
-        HopcroftKarp hk = new HopcroftKarp(G);
+        oldHopcrofts.push(hk.actions);
+        oldMatchingNums.push(hk.numMatching);
+        hk = new HopcroftKarp(G);
+        hk.searchForAMatching();
+        for (int i = 0; i < G.nodeArray.length; i++){//DAS SOLLTE HIER NICHT BLEIBEN...
+            hk.B.nodeArray[i].active = G.nodeArray[i].active;
+            hk.B.nodeArray[i + hk.size].active = G.nodeArray[i].active;
+        }
         int size = hk.size;
         int bipartiteSize = hk.nil;
         LinkedList<Integer>[] residualGraph = new LinkedList[bipartiteSize + 2];//the residual graph is saved in an array of linked lists as adjacency lists.
-        Node s = new Node("s", bipartiteSize,bipartiteSize/2);//add s and t nodes
-        Node t = new Node("t", bipartiteSize + 1,bipartiteSize/2);
-        residualGraph[s.id] = new LinkedList<>();
-        residualGraph[t.id] = new LinkedList<>();
+        residualGraph[bipartiteSize] = new LinkedList<>(); // add s and t nodes
+        residualGraph[bipartiteSize + 1] = new LinkedList<>();
         for (int i = 0; i < size; i++){
             residualGraph[i] = new LinkedList<>();
             if (G.nodeArray[i].active) {
                 for (Integer integer : G.nodeArray[i].neighbours) residualGraph[i].add(integer + size);
-                if (hk.pair[i] == hk.nil) residualGraph[s.id].add(i);
-                else residualGraph[i].add(s.id);
+                if (hk.pair[i] == hk.nil) residualGraph[bipartiteSize].add(i);
+                else residualGraph[i].add(bipartiteSize);
             }
         }
         for (int i = G.nodeArray.length; i < bipartiteSize; i++){
             residualGraph[i] = new LinkedList<>();
             if (G.nodeArray[i - size].active){
-                if (hk.pair[i] == hk.nil) residualGraph[i].add(t.id);
+                if (hk.pair[i] == hk.nil) residualGraph[i].add(bipartiteSize + 1);
                 else {
-                    residualGraph[t.id].add(i);
+                    residualGraph[bipartiteSize + 1].add(i);
                     residualGraph[i].add(hk.pair[i]);
                 }
             }
@@ -72,7 +110,7 @@ public class Reduction {
         boolean[] reachedFromS = new boolean[bipartiteSize + 2];
         //run BFS to find nodes reached from s:
         Queue<Integer> q = new LinkedList<>();
-        q.offer(s.id);
+        q.offer(bipartiteSize);
         while (!q.isEmpty()){
             int v = q.poll();
             reachedFromS[v] = true;
@@ -83,17 +121,29 @@ public class Reduction {
                 }
             }
         }
-        for (int i = 0; i < size; i++){
-            if (reachedFromS[i] && !reachedFromS[i + size]) removeUselessNodes(G.nodeArray[i]); //LP solution = 0
-            else if (!reachedFromS[i] && reachedFromS[i + size]) removeVCNodes(G.nodeArray[i]); //LP solution = 1
-        }
-        LinkedList<LinkedList<Node>> scc = StrongComponentsFinder.findStrongComponents(hk.B, residualGraph);
+            for (int i = 0; i < size; i++) {
+                if (G.nodeArray[i].active) {
+                    if (reachedFromS[i] && !reachedFromS[i + size]) removeUselessNodes(G.nodeArray[i]); //LP solution = 0
+                    else if (!reachedFromS[i] && reachedFromS[i + size]) removeVCNodes(G.nodeArray[i]); //LP solution = 1
+                }
+            }
+            while (true) {
+                LinkedList<LinkedList<Node>> scc = StrongComponentsFinder.findStrongComponents(hk.B, residualGraph);
+                if (scc.isEmpty()) break;
+                for (LinkedList<Node> component : scc) for (Node n : component){
+                    if (n.id < size) {
+                        if (G.nodeArray[n.id].active) removeUselessNodes(G.nodeArray[n.id]);
+                    }
+                    else if (n.id < bipartiteSize) if (G.nodeArray[n.id - size].active) removeVCNodes(G.nodeArray[n.id - size]);
+                    }
+                }
+            }
 
-    }
 
     public void removeDegreeTwo(){
         for (Node node : G.nodeArray){
             if (node.active && node.activeNeighbours == 2){
+                deg2cuts++;
                 Node first = null, second = null;
                 int it = 0;
                 while (first == null){
@@ -104,8 +154,8 @@ public class Reduction {
                     Node current = G.nodeArray[node.neighbours[it++]];
                     if (current.active) second = current;
                 }
-                if (!arrayContains(first.neighbours, second.id)) mergeNodes(first, second, node); // case v,w \in E
-                else{ // case v,w \not \in E
+                if (!arrayContains(first.neighbours, second.id)) mergeNodes(first, second, node); // case v,w \not \in E
+                else{ // case v,w \in E
                     removeUselessNodes(node);
                     removeVCNodes(first);
                     removeVCNodes(second);
@@ -139,14 +189,24 @@ public class Reduction {
                     G.reeaddNode(node);
                     LinkedList<Node> a = new LinkedList<>();
                     a.add(node);
-                    hk.updateAddNodes(a);
+                    if (hk.actions.isEmpty() || hk.numMatching.isEmpty()){
+                        hk = new HopcroftKarp(G);
+                        hk.actions = oldHopcrofts.pop();
+                        hk.numMatching = oldMatchingNums.pop();
+                    }
+                    else hk.updateAddNodes(a);
                     break;
                 case 2: //useful Nodes
                     G.reeaddNode(node);
                     VCNodes.remove(node);
                     LinkedList<Node> b = new LinkedList<>();
                     b.add(node);
-                    hk.updateAddNodes(b);
+                    if (hk.actions.isEmpty() || hk.numMatching.isEmpty()){
+                        hk = new HopcroftKarp(G);
+                        hk.actions = oldHopcrofts.pop();
+                        hk.numMatching = oldMatchingNums.pop();
+                    }
+                    else hk.updateAddNodes(b);
                     break;
                 case 3: //merged Nodes :(
                     VCNodes.remove(G.nodeArray[action[3]]);
@@ -168,6 +228,15 @@ public class Reduction {
                     node.activeNeighbours -= action[4];
                     G.reeaddNode(G.nodeArray[action[2]]);
                     G.reeaddNode(G.nodeArray[action[3]]);
+                    LinkedList<Node> ll = new LinkedList<>();
+                    ll.add(G.nodeArray[action[2]]);
+                    ll.add(G.nodeArray[action[3]]);
+                    if (hk.actions.isEmpty() || hk.numMatching.isEmpty()){
+                        hk = new HopcroftKarp(G);
+                        hk.actions = oldHopcrofts.pop();
+                        hk.numMatching = oldMatchingNums.pop();
+                    }
+                    else hk.updateAddNodes(ll);
                     break;
             }
             action = removedNodes.pop();
@@ -180,6 +249,7 @@ public class Reduction {
             changed = false;
             for (Node node : G.nodeArray) {
                 if(node.activeNeighbours == 1 && node.active){
+                    deg1cuts++;
                     int i = 0;
                     while (!G.nodeArray[node.neighbours[i]].active){
                         i++;
@@ -197,6 +267,7 @@ public class Reduction {
     private void removeDegreeZero(){
         for (Node node : G.nodeArray) {
             if(node.activeNeighbours == 0 && node.active){
+                deg0cuts++;
                 removeUselessNodes(node);
             }
         }
@@ -205,7 +276,6 @@ public class Reduction {
     private boolean BussRule(int k){
         return (G.activeNodes > (k * k) + k || G.totalEdges > k * k);
     }
-
 
     public int reduceThroughCC(CliqueCover cc, int k, Graph G){
         LinkedList<Node> cliqueNeighbours = new LinkedList<>();
@@ -255,17 +325,22 @@ public class Reduction {
      * @param nodeA node to be merged and to remain active
      * @param nodeB node to be merged into nodeA
      * @param nodeC node with two neighbours nodeA and nodeB
-     *              merges nodeB into nodeA, adds nodeC to the vertex cover and saves the action
+     * @implNote     merges nodeB into nodeA, adds nodeC to the vertex cover and saves the action
      *              (Array resizing is done here!)
      */
     private void mergeNodes(Node nodeA, Node nodeB, Node nodeC){
+        merged = true;
         LinkedList<Integer> addedNeighbours = new LinkedList<>();
         G.removeNode(nodeC);
         G.removeNode(nodeB);
+        LinkedList<Node> a = new LinkedList<>();
+        a.add(nodeC);
+        a.add(nodeB);
+        hk.updateDeleteNodes(a);
         VCNodes.add(nodeC);
         for (int n : nodeB.neighbours){
             Node neighbour = G.nodeArray[n];
-            if (neighbour.active && IntStream.of(nodeA.neighbours).noneMatch(x -> x == n)){
+            if (neighbour.active && !arrayContains(nodeA.neighbours, n)){
                 addedNeighbours.add(n);
                 for (int i = 0; i < neighbour.neighbours.length; i++){
                     if (neighbour.neighbours[i] == nodeB.id) {
@@ -383,7 +458,6 @@ public class Reduction {
         return res;
     }
 
-    
     private void applyUnconfined(){
         //remove all unconfined nodes. also checks Neighbors of every removed node
         BitSet N_S = new BitSet(G.nodeArray.length);
@@ -391,6 +465,7 @@ public class Reduction {
         boolean[] checked = new boolean[G.nodeArray.length];
         for(int i=0;i< G.nodeArray.length;i++){//geht das besser?
             if (G.nodeArray[i].active && new_unconfined(i,N_S)) {
+                unconfcuts++;
                 removeVCNodes(G.nodeArray[i]);
                 for(Integer j : G.nodeArray[i].neighbours){
                     q.offer(j);
@@ -411,11 +486,6 @@ public class Reduction {
             }
         }
     }
-
-
-            
-
-
 
 }
 
