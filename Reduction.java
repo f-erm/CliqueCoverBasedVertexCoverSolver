@@ -39,9 +39,6 @@ public class Reduction {
 
     public int rollOutAll(int k){
         merged = false;
-        for (int i = 0; i < G.nodeArray.length; i++) if (G.nodeArray[i].active != hk.B.nodeArray[i].active){
-            int als = 0;
-        }
         long time = System.nanoTime();
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
