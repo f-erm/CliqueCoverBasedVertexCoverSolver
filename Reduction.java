@@ -125,14 +125,18 @@ public class Reduction {
                 }
             }
             while (true) {
-                LinkedList<LinkedList<Node>> scc = StrongComponentsFinder.findStrongComponents(hk.B, residualGraph);
+                VeryStrongComponentsFinder vscf = new VeryStrongComponentsFinder(hk.B, residualGraph);
+                LinkedList<LinkedList<Integer>> scc = vscf.findStrongComponents();
                 if (scc.isEmpty()) break;
-                for (LinkedList<Node> component : scc) for (Node n : component){
-                    if (n.id < size) {
-                        if (G.nodeArray[n.id].active) removeUselessNodes(G.nodeArray[n.id]);
+                for (LinkedList<Integer> component : scc) for (int n : component){
+                    lpcuts++;
+                    if (n < size) {
+                        if (G.nodeArray[n].active) removeUselessNodes(G.nodeArray[n]);
+                        else break;
                     }
-                    else if (n.id < bipartiteSize) if (G.nodeArray[n.id - size].active) removeVCNodes(G.nodeArray[n.id - size]);
-                    }
+                    else if (n < bipartiteSize) if (G.nodeArray[n - size].active) removeVCNodes(G.nodeArray[n - size]);
+                    else break;
+                }
                 }
             }
 
@@ -248,9 +252,9 @@ public class Reduction {
                 if(node.activeNeighbours == 1 && node.active){
                     deg1cuts++;
                     int i = 0;
-                    while (!G.nodeArray[node.neighbours[i]].active){
-                        i++;
-                    }
+                        while (!G.nodeArray[node.neighbours[i]].active) {
+                            i++;
+                        }
                     Node neighbour = G.nodeArray[node.neighbours[i]];
                     removeVCNodes(neighbour);
                     removeUselessNodes(node);
