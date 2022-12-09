@@ -16,6 +16,7 @@ public class HopcroftKarp implements Cloneable {
     Stack<Integer> numLastLowerBound;
     Stack<int[]> dists;
     Stack<int[]> actions;
+    Graph G;
 
     /**
      * Constructs the bipartite graph used for a lower bound of vertex cover and
@@ -25,6 +26,7 @@ public class HopcroftKarp implements Cloneable {
      * @param G input Graph
      */
     public HopcroftKarp(Graph G) {
+        this.G = G;
         B = new Graph();
         size = G.nodeArray.length;
         nil = size * 2;
@@ -182,6 +184,10 @@ public class HopcroftKarp implements Cloneable {
      * find augmenting path for currently not-matched nodes. Update Matching
      */
     public void searchForAMatching(){
+            for (int i = 0; i < G.nodeArray.length; i++){//DAS SOLLTE HIER NICHT BLEIBEN...
+                B.nodeArray[i].active = G.nodeArray[i].active;
+                B.nodeArray[i + size].active = G.nodeArray[i].active;
+            }
         while (bfs()){
             for (int i = 0; i < size; i++){
                 if (pair[i] == nil && B.nodeArray[i].active){

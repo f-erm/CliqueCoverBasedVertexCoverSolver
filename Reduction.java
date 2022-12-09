@@ -37,50 +37,56 @@ public class Reduction {
         oldMatchingNums = new Stack<>();
     }
 
-    public int rollOutAll(int k){
+    public int rollOutAll(int k, boolean doReduction){
         merged = false;
         long time = System.nanoTime();
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
-        removeDegreeOne();
-        deg1Time += System.nanoTime() - time;
-        time = System.nanoTime();
-        applyUnconfined();
-        unconfTime += System.nanoTime() - time;
-        time = System.nanoTime();
-        removeDegreeTwo();
-        if (merged) {
-            oldHopcrofts.push(hk.actions);
-            oldMatchingNums.push(hk.numMatching);
-            hk = new HopcroftKarp(G);
+            removeDegreeOne();
+            deg1Time += System.nanoTime() - time;
+            time = System.nanoTime();
+            removeDegreeTwo();
+            if (VCNodes.size() - oldK > k) return k + 1;
+            if (merged) {
+                oldHopcrofts.push(hk.actions);
+                oldMatchingNums.push(hk.numMatching);
+                hk = new HopcroftKarp(G);
+            }
+            deg2Time += System.nanoTime() - time;
+            time = System.nanoTime();
+            applyUnconfined();
+            if (VCNodes.size() - oldK > k) return k + 1;
+            unconfTime += System.nanoTime() - time;
+            time = System.nanoTime();
+            if (doReduction) improvedLP(G);
+            if (VCNodes.size() - oldK > k) return k + 1;
+            lpTime += System.nanoTime() - time;
+            time = System.nanoTime();
+            removeDegreeZero();
+            deg0Time += System.nanoTime() - time;
+            time = System.nanoTime();
+            if (BussRule(k)) {
+                busscuts++;
+                return k + 1;
+            }
+            bussTime += System.nanoTime() - time;
+            time = System.nanoTime();
+            boolean changed = true;
+        while (changed){
+            changed = removeDegreeOne();
+            changed = changed || removeDegreeTwo();
+            removeDegreeZero();
         }
-        deg2Time += System.nanoTime() - time;
-        time = System.nanoTime();
-        improvedLP(G);
-        lpTime += System.nanoTime() - time;
-        time = System.nanoTime();
-        removeDegreeZero();
-        deg0Time += System.nanoTime() - time;
-        time = System.nanoTime();
-        if (BussRule(k)){
-            busscuts++;
-            return k+1;
-        }
-        bussTime += System.nanoTime() - time;
-        time = System.nanoTime();
         return VCNodes.size() - oldK;
     }
 
 
-    public void improvedLP(Graph G){
+    public boolean improvedLP(Graph G){
+        boolean changed = false;
         oldHopcrofts.push(hk.actions);
         oldMatchingNums.push(hk.numMatching);
         hk = new HopcroftKarp(G);
         hk.searchForAMatching();
-        for (int i = 0; i < G.nodeArray.length; i++){//DAS SOLLTE HIER NICHT BLEIBEN...
-            hk.B.nodeArray[i].active = G.nodeArray[i].active;
-            hk.B.nodeArray[i + hk.size].active = G.nodeArray[i].active;
-        }
         int size = hk.size;
         int bipartiteSize = hk.nil;
         LinkedList<Integer>[] residualGraph = new LinkedList[bipartiteSize + 2];//the residual graph is saved in an array of linked lists as adjacency lists.
@@ -130,6 +136,7 @@ public class Reduction {
                 if (scc.isEmpty()) break;
                 for (LinkedList<Integer> component : scc) for (int n : component){
                     lpcuts++;
+                    changed = true;
                     if (n < size) {
                         if (G.nodeArray[n].active) removeUselessNodes(G.nodeArray[n]);
                         else break;
@@ -138,12 +145,15 @@ public class Reduction {
                     else break;
                 }
                 }
+            return changed;
             }
 
 
-    public void removeDegreeTwo(){
+    public boolean removeDegreeTwo(){
+        boolean changed = false;
         for (Node node : G.nodeArray){
             if (node.active && node.activeNeighbours == 2){
+                changed = true;
                 deg2cuts++;
                 Node first = null, second = null;
                 int it = 0;
@@ -163,6 +173,7 @@ public class Reduction {
                 }
             }
         }
+        return changed;
     }
 
     public void removeDegreeLargerKAndZero(Graph G, int k){
@@ -244,7 +255,8 @@ public class Reduction {
         }
     }
 
-    private void removeDegreeOne(){
+    private boolean removeDegreeOne(){
+        boolean allInAllChanged = false;
         boolean changed = true;
         while (changed){
             changed = false;
@@ -259,10 +271,12 @@ public class Reduction {
                     removeVCNodes(neighbour);
                     removeUselessNodes(node);
                     changed = true;
+                    allInAllChanged = true;
                     break;
                 }
             }
         }
+        return allInAllChanged;
     }
 
     private void removeDegreeZero(){
@@ -459,7 +473,8 @@ public class Reduction {
         return res;
     }
 
-    private void applyUnconfined(){
+    private boolean applyUnconfined(){
+        boolean changed = false;
         //remove all unconfined nodes. also checks Neighbors of every removed node
         BitSet N_S = new BitSet(G.nodeArray.length);
         Queue<Integer> q = new LinkedList<>();
@@ -467,6 +482,7 @@ public class Reduction {
         for(int i=0;i< G.nodeArray.length;i++){//geht das besser?
             if (G.nodeArray[i].active && new_unconfined(i,N_S)) {
                 unconfcuts++;
+                changed = true;
                 removeVCNodes(G.nodeArray[i]);
                 for(Integer j : G.nodeArray[i].neighbours){
                     q.offer(j);
@@ -486,6 +502,7 @@ public class Reduction {
                 }
             }
         }
+        return changed;
     }
 
 }

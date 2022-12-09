@@ -24,6 +24,6 @@ public class Worker implements Callable {
 
     @Override    
     public LinkedList<Node> call() throws Exception {    
-        return Alg.vc_branch_nodes(G,k,firstActiveNode,hk,lastPerm);
+        return Alg.vc_branch_nodes(G,k,firstActiveNode,hk,lastPerm, 0);
     } 
 }   
