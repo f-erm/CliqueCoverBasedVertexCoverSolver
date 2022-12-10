@@ -94,6 +94,9 @@ public class VeryStrongComponentsFinder {
         LinkedList<LinkedList<Integer>> goodScc = new LinkedList<>();
         HashSet<Integer> evilNodes = new HashSet<>();
         for (LinkedList<Integer> scc : allComponents) {
+            if (scc.size() == 1) {
+                continue;
+            }
             boolean add = true;
             HashSet<Integer> hs = new HashSet<>();
             for (int id : scc) {

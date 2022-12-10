@@ -49,6 +49,7 @@ public class Reduction {
             if (VCNodes.size() - oldK > k) return k + 1;
             unconfTime += System.nanoTime() - time;
             time = System.nanoTime();
+            //removeDegreeZero();
             if (doReduction) improvedLP(G);
             if (VCNodes.size() - oldK > k) return k + 1;
             lpTime += System.nanoTime() - time;
@@ -83,7 +84,7 @@ public class Reduction {
         for (int i = 0; i < size; i++){
             residualGraph[i] = new LinkedList<>();
             if (G.nodeArray[i].active) {
-                for (Integer integer : G.nodeArray[i].neighbours) residualGraph[i].add(integer + size);
+                for (Integer integer : G.nodeArray[i].neighbours) if (G.nodeArray[integer].active) residualGraph[i].add(integer + size);
                 if (hk.pair[i] == hk.nil) residualGraph[bipartiteSize].add(i);
                 else residualGraph[i].add(bipartiteSize);
             }
@@ -114,23 +115,25 @@ public class Reduction {
         }
             for (int i = 0; i < size; i++) {
                 if (G.nodeArray[i].active) {
-                    if (reachedFromS[i] && !reachedFromS[i + size]) removeUselessNodes(G.nodeArray[i]); //LP solution = 0
-                    else if (!reachedFromS[i] && reachedFromS[i + size]) removeVCNodes(G.nodeArray[i]); //LP solution = 1
+                    if (!reachedFromS[i] && reachedFromS[i + size]) removeVCNodes(G.nodeArray[i]); //LP solution = 1
+                    else if (reachedFromS[i] && !reachedFromS[i + size]) removeUselessNodes(G.nodeArray[i]); //LP solution = 0
                 }
             }
             while (true) {
                 VeryStrongComponentsFinder vscf = new VeryStrongComponentsFinder(hk.B, residualGraph);
                 LinkedList<LinkedList<Integer>> scc = vscf.findStrongComponents();
                 if (scc.isEmpty()) break;
-                for (LinkedList<Integer> component : scc) for (int n : component){
-                    lpcuts++;
-                    changed = true;
-                    if (n < size) {
-                        if (G.nodeArray[n].active) removeUselessNodes(G.nodeArray[n]);
-                        else break;
+                for (LinkedList<Integer> component : scc) {
+                    for (int n : component) {
+                        lpcuts++;
+                        changed = true;
+                        if (n < size) {
+                            if (G.nodeArray[n].active) removeUselessNodes(G.nodeArray[n]);
+                            else break;
+                        } else if (n < bipartiteSize)
+                            if (G.nodeArray[n - size].active) removeVCNodes(G.nodeArray[n - size]);
+                            else break;
                     }
-                    else if (n < bipartiteSize) if (G.nodeArray[n - size].active) removeVCNodes(G.nodeArray[n - size]);
-                    else break;
                 }
                 }
             return changed;

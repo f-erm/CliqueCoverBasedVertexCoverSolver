@@ -31,7 +31,8 @@ public class Algorithms {
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
         reduction = new Reduction(G, hk);
-        //int l = reduction.rollOutAll(G.activeNodes, true);
+        int l = reduction.rollOutAll(G.activeNodes, true);
+        hk.searchForAMatching();
         cc = new CliqueCover(G);
         cc.cliqueCoverIterations(10, 5, null);
         bestPermutation = cc.permutation;
@@ -44,7 +45,7 @@ public class Algorithms {
             }
 
         }
-        int k = Math.max(hk.lastLowerBound, bestLowerBound) + G.partialSolution.size();
+        int k = Math.max(hk.totalCycleLB, bestLowerBound);
         k = reduction.reduceThroughCC(cc, k, G);
 
         if (k < 0) return null;
@@ -54,9 +55,9 @@ public class Algorithms {
         }
         while (true) {
             if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
-            System.out.println("# k is " + k);
+            System.out.println("# k is " + (k + G.partialSolution.size() + l));
             System.out.println("# recursiveSteps " + recursiveSteps);
-            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, bestPermutation, 0);
+            LinkedList<Node> S = vc_branch_nodes(G, k, 0,hk, bestPermutation, 0);
             if (S != null) {
                 S.addAll(reduction.VCNodes);
                 while (!reduction.mergedNodes.isEmpty()){
@@ -84,13 +85,17 @@ public class Algorithms {
      */
     public LinkedList<Node> vc_branch_nodes(Graph G, int k, int firstActiveNode, HopcroftKarp hk, LinkedList<Integer> lastPerm, int depth) {
         //Stop for edgeless G
-        if (k < 0) return null;
+        if (k < 0) {
+            return null;
+        }
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
         int l = reduction.rollOutAll(k, depth % 1 == 0);
         k -= l;
-        if (k < 0) return null;
+        if (k < 0) {
+            return null;
+        }
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
@@ -112,7 +117,9 @@ public class Algorithms {
             }
             //k = reduction.reduceThroughCC(cc, k, G);
 
-            if (k < 0) return null;
+            if (k < 0){
+                return null;
+            }
             if (G.totalEdges == 0) {
                 return new LinkedList<>();
             }
