@@ -31,8 +31,7 @@ public class Algorithms {
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
         reduction = new Reduction(G, hk);
-        int l = reduction.rollOutAll(G.activeNodes, true);
-        hk.searchForAMatching();
+        //int l = reduction.rollOutAll(G.activeNodes, true);
         cc = new CliqueCover(G);
         cc.cliqueCoverIterations(10, 5, null);
         bestPermutation = cc.permutation;
@@ -45,7 +44,7 @@ public class Algorithms {
             }
 
         }
-        int k = Math.max(hk.totalCycleLB, bestLowerBound);
+        int k = Math.max(hk.lastLowerBound, bestLowerBound) + G.partialSolution.size();
         k = reduction.reduceThroughCC(cc, k, G);
 
         if (k < 0) return null;
@@ -55,9 +54,9 @@ public class Algorithms {
         }
         while (true) {
             if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
-            System.out.println("# k is " + (k + G.partialSolution.size() + l));
+            System.out.println("# k is " + k);
             System.out.println("# recursiveSteps " + recursiveSteps);
-            LinkedList<Node> S = vc_branch_nodes(G, k, 0,hk, bestPermutation, 0);
+            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, bestPermutation, 0);
             if (S != null) {
                 S.addAll(reduction.VCNodes);
                 while (!reduction.mergedNodes.isEmpty()){
