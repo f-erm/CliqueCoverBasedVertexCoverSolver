@@ -58,7 +58,7 @@ public class VeryStrongComponentsFinder {
             boolean recurse = false;
             for (int i = j; i < residualGraph[u].size(); i++){
                 int v = residualGraph[u].get(i);
-                if (!B.nodeArray[v].active || v >= size) continue;
+                if (v >= size || !B.nodeArray[v].active) continue;
                 if (lowLink[v] == -1){
                     work.push(u);
                     work2.push(i + 1);

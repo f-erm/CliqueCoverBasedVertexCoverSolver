@@ -12,8 +12,6 @@ public class Reduction {
     Graph G;
     HopcroftKarp hk;
     boolean merged;
-    Stack<Stack<int[]>> oldHopcrofts;
-    Stack<Stack<Integer>> oldMatchingNums;
     long deg1Time = 0;
     int deg1cuts = 0;
     long deg2Time = 0;
@@ -33,8 +31,6 @@ public class Reduction {
         removedNodes = new Stack<>();
         mergedNodes = new Stack<>();
         this.hk = hk;
-        oldHopcrofts = new Stack<>();
-        oldMatchingNums = new Stack<>();
     }
 
     public int rollOutAll(int k, boolean doReduction){
@@ -47,11 +43,6 @@ public class Reduction {
             time = System.nanoTime();
             removeDegreeTwo();
             if (VCNodes.size() - oldK > k) return k + 1;
-            if (merged) {
-                oldHopcrofts.push(hk.actions);
-                oldMatchingNums.push(hk.numMatching);
-                hk = new HopcroftKarp(G);
-            }
             deg2Time += System.nanoTime() - time;
             time = System.nanoTime();
             applyUnconfined();
@@ -83,9 +74,6 @@ public class Reduction {
 
     public boolean improvedLP(Graph G){
         boolean changed = false;
-        oldHopcrofts.push(hk.actions);
-        oldMatchingNums.push(hk.numMatching);
-        hk = new HopcroftKarp(G);
         hk.searchForAMatching();
         int size = hk.size;
         int bipartiteSize = hk.nil;
@@ -165,7 +153,13 @@ public class Reduction {
                     Node current = G.nodeArray[node.neighbours[it++]];
                     if (current.active) second = current;
                 }
-                if (!arrayContains(first.neighbours, second.id)) mergeNodes(first, second, node); // case v,w \not \in E
+                if (!arrayContains(first.neighbours, second.id)){
+                    mergeNodes(first, second, node); // case v,w \not \in E
+                    /*LinkedList<Node> a = new LinkedList<>();
+                    a.add(second);
+                    a.add(node);
+                    hk.updateAddNodes(a);*/
+                }
                 else{ // case v,w \in E
                     removeUselessNodes(node);
                     removeVCNodes(first);
@@ -201,24 +195,14 @@ public class Reduction {
                     G.reeaddNode(node);
                     LinkedList<Node> a = new LinkedList<>();
                     a.add(node);
-                    if (hk.actions.isEmpty() || hk.numMatching.isEmpty()){
-                        hk = new HopcroftKarp(G);
-                        hk.actions = oldHopcrofts.pop();
-                        hk.numMatching = oldMatchingNums.pop();
-                    }
-                    else hk.updateAddNodes(a);
+                    hk.updateAddNodes(a);
                     break;
                 case 2: //useful Nodes
                     G.reeaddNode(node);
                     VCNodes.remove(node);
                     LinkedList<Node> b = new LinkedList<>();
                     b.add(node);
-                    if (hk.actions.isEmpty() || hk.numMatching.isEmpty()){
-                        hk = new HopcroftKarp(G);
-                        hk.actions = oldHopcrofts.pop();
-                        hk.numMatching = oldMatchingNums.pop();
-                    }
-                    else hk.updateAddNodes(b);
+                    hk.updateAddNodes(b);
                     break;
                 case 3: //merged Nodes :(
                     VCNodes.remove(G.nodeArray[action[3]]);
@@ -243,12 +227,7 @@ public class Reduction {
                     LinkedList<Node> ll = new LinkedList<>();
                     ll.add(G.nodeArray[action[2]]);
                     ll.add(G.nodeArray[action[3]]);
-                    if (hk.actions.isEmpty() || hk.numMatching.isEmpty()){
-                        hk = new HopcroftKarp(G);
-                        hk.actions = oldHopcrofts.pop();
-                        hk.numMatching = oldMatchingNums.pop();
-                    }
-                    else hk.updateAddNodes(ll);
+                    hk.updateAddNodes(ll);
                     break;
             }
             action = removedNodes.pop();
@@ -377,6 +356,7 @@ public class Reduction {
         removedNodes.push(new int[]{3, nodeA.id, nodeB.id, nodeC.id, addedNeighbours.size()});
         nodeA.activeNeighbours += addedNeighbours.size();
         mergedNodes.push(new int[]{nodeA.id, nodeB.id, nodeC.id});
+        hk.updateMergeNodes(nodeA.id, nodeB.id, addedNeighbours);
     }
 
     private boolean arrayContains(int[] array, int el){

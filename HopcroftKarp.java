@@ -16,6 +16,7 @@ public class HopcroftKarp implements Cloneable {
     Stack<Integer> numLastLowerBound;
     Stack<int[]> dists;
     Stack<int[]> actions;
+    Stack<int[]> oldNeighbourLists;
     Graph G;
 
     /**
@@ -51,6 +52,7 @@ public class HopcroftKarp implements Cloneable {
         }
         states = new Stack<>();
         dists = new Stack<>();
+        oldNeighbourLists = new Stack<>();
         numLastLowerBound = new Stack<>();
         numMatching = new Stack<>(); //save all changes for efficient readding
         actions = new Stack<>();
@@ -148,6 +150,38 @@ public class HopcroftKarp implements Cloneable {
         }
     }
 
+    public void updateMergeNodes(int nodeA, int nodeB, LinkedList<Integer> toAdd) {
+        Node a = B.nodeArray[nodeA];
+        int[] newArray = new int[B.nodeArray[nodeA].neighbours.length + toAdd.size()];
+        System.arraycopy(a.neighbours, 0, newArray, 0, a.neighbours.length);
+        int[] newArray2 = new int[B.nodeArray[nodeA + size].neighbours.length + toAdd.size()];
+        System.arraycopy(a.neighbours, 0, newArray2, 0, a.neighbours.length);
+        int j = a.neighbours.length;
+        for (int neighbour : toAdd) {
+            newArray[j] = nodeA + size;
+            newArray2[j++] = nodeA;
+            Node n = B.nodeArray[neighbour];
+            for (int i = 0; i < n.neighbours.length; i++) {
+                if (n.neighbours[i] == nodeB + size) {
+                    n.neighbours[i] = nodeA + size;
+                    B.nodeArray[neighbour + size].neighbours[i] = nodeA;
+                    break;
+                }
+            }
+        }
+        oldNeighbourLists.push(a.neighbours);
+        oldNeighbourLists.push(B.nodeArray[nodeA + size].neighbours);
+        a.neighbours = newArray;
+        B.nodeArray[nodeA + size].neighbours = newArray2;
+        int[] actionArray = new int[3 + toAdd.size()];
+        actionArray[0] = 3;
+        actionArray[1] = nodeA;
+        actionArray[2] = nodeB;
+        int k = 3;
+        for (int i : toAdd) actionArray[k++] = i;
+        actions.push(actionArray);
+    }
+
     /**
      * readd previously deleted nodes from a stack. Inverse of updateDeleteNodes
      *
@@ -174,20 +208,34 @@ public class HopcroftKarp implements Cloneable {
                     B.nodeArray[action[1]].active = true;
                     B.nodeArray[action[1] + size].active = true;
                     break;
+                case 3:
+                    int nodeA = action[1];
+                    int nodeB = action[2];
+                    LinkedList<Integer> toAdd = new LinkedList<>();
+                    for (int i = 3; i < action.length; i++) toAdd.add(action[i]);
+                    B.nodeArray[nodeB].active = true;
+                    B.nodeArray[nodeB + size].active = true;
+                    B.nodeArray[nodeA + size].neighbours = oldNeighbourLists.pop();
+                    B.nodeArray[nodeA].neighbours = oldNeighbourLists.pop();
+                    for (int neighbour : toAdd) {
+                        Node n = B.nodeArray[neighbour];
+                        for (int i = 0; i < n.neighbours.length; i++) {
+                            if (n.neighbours[i] == nodeA + size) {
+                                n.neighbours[i] = nodeB + size;
+                                B.nodeArray[neighbour + size].neighbours[i] = nodeB;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+            }
+            action = actions.pop();
         }
-        action = actions.pop();
     }
-
-}
-
     /**
      * find augmenting path for currently not-matched nodes. Update Matching
      */
     public void searchForAMatching(){
-            for (int i = 0; i < G.nodeArray.length; i++){//DAS SOLLTE HIER NICHT BLEIBEN...
-                B.nodeArray[i].active = G.nodeArray[i].active;
-                B.nodeArray[i + size].active = G.nodeArray[i].active;
-            }
         while (bfs()){
             for (int i = 0; i < size; i++){
                 if (pair[i] == nil && B.nodeArray[i].active){

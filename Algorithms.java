@@ -31,6 +31,7 @@ public class Algorithms {
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
         reduction = new Reduction(G, hk);
+        //int l = reduction.rollOutAll(G.activeNodes, true);
         cc = new CliqueCover(G);
         cc.cliqueCoverIterations(10, 5, null);
         bestPermutation = cc.permutation;
@@ -87,19 +88,20 @@ public class Algorithms {
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
-        int l = reduction.rollOutAll(k, depth % 2 == 0);
+        int l = reduction.rollOutAll(k, depth % 1 == 0);
         k -= l;
         if (k < 0) return null;
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
         long time = System.nanoTime();
-        //hk.searchForAMatching();
+        hk.searchForAMatching();
         totalTimeHK += System.nanoTime() - time;
-        /*if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
+        if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
             totalBranchCutsHK++;
+
             return null;
-        }*/
+        }
         time = System.nanoTime();
         if (doCliqueCover) {
             cc = new CliqueCover(G);
