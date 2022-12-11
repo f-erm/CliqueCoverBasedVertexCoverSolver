@@ -37,7 +37,8 @@ public class Algorithms {
         cc.cliqueCoverIterations(10, 5, null);
         bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
-        for (int i = 0; i < 2500; i++){
+        long time = System.nanoTime();
+        for (int i = 0; i < G.activeNodes && (System.nanoTime() - time)/1024 < 10000000; i++){
             cc.cliqueCoverIterations(10, 5, null);
             if (cc.lowerBound > bestLowerBound){
                 bestLowerBound = cc.lowerBound;
@@ -45,7 +46,7 @@ public class Algorithms {
             }
 
         }
-        System.out.println("#Clique Cover Quality: " + bestLowerBound);
+        System.out.println("# Clique Cover Quality: " + bestLowerBound);
         int k = Math.max(hk.totalCycleLB, bestLowerBound);
         k = reduction.reduceThroughCC(cc, k, G);
 
@@ -88,7 +89,7 @@ public class Algorithms {
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
-        int l = reduction.rollOutAll(k, depth % 25 == 0);
+        int l = reduction.rollOutAll(k, depth % 25 == 9);
         k -= l;
         if (k < 0) {
             return null;
@@ -112,7 +113,7 @@ public class Algorithms {
                 //totalTimeCC += System.nanoTime() - time;
                 return null;
             }
-            //k = reduction.reduceThroughCC(cc, k, G);
+            k = reduction.reduceThroughCC(cc, k, G);
 
             if (k < 0){
                 return null;

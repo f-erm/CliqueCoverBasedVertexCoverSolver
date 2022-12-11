@@ -11,7 +11,6 @@ public class Reduction {
     Stack<int[]> removedNodes;
     Graph G;
     HopcroftKarp hk;
-    boolean merged;
     long deg1Time = 0;
     int deg1cuts = 0;
     long deg2Time = 0;
@@ -24,7 +23,10 @@ public class Reduction {
     int busscuts = 0;
     long lpTime = 0;
     int lpcuts = 0;
-    public Reduction(Graph G, HopcroftKarp hk){
+    int twincuts = 0;
+    long twintime = 0;
+
+    public Reduction(Graph G, HopcroftKarp hk) {
         this.G = G;
         VCNodes = new LinkedList<>();
         uselessNeighbours = new LinkedList<>();
@@ -34,15 +36,15 @@ public class Reduction {
     }
 
     public int rollOutAll(int k, boolean doReduction){
-        merged = false;
         long time = System.nanoTime();
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
-            removeDegreeOne();
+            //removeDegreeOne();
             //deg1Time += System.nanoTime() - time;
             //time = System.nanoTime();
-            removeDegreeTwo();
-            //removeTwin();
+            //removeDegreeTwo();
+            removeDegreeX(k);
+            if (doReduction) removeTwin();
             if (VCNodes.size() - oldK > k) return k + 1;
             //deg2Time += System.nanoTime() - time;
             //time = System.nanoTime();
@@ -56,7 +58,8 @@ public class Reduction {
             if (VCNodes.size() - oldK > k) return k + 1;
             //lpTime += System.nanoTime() - time;
             //time = System.nanoTime();
-            removeDegreeZero();
+            removeDegreeX(k);
+            //removeDegreeZero();
             //deg0Time += System.nanoTime() - time;
             //time = System.nanoTime();
             if (BussRule(k)) {
@@ -74,40 +77,61 @@ public class Reduction {
         return VCNodes.size() - oldK;
     }
 
-    public boolean removeTwin(){
+    public boolean removeTwin() {
         LinkedList<LinkedList<Integer>> neighbourLists = new LinkedList<>();
         LinkedList<Integer> deg3nodes = new LinkedList<>();
-        for (int i = 0; i < G.nodeArray.length; i++){
+        for (int i = 0; i < G.nodeArray.length; i++) {
             Node n = G.nodeArray[i];
-            if (n.active && n.activeNeighbours == 3){
+            if (n.active && n.activeNeighbours == 3) {
                 LinkedList<Integer> neighbours = new LinkedList<>();
                 boolean[] notPartners = new boolean[neighbourLists.size()];
-                for (int j = 0; j < n.neighbours.length; j++){
+                for (int j = 0; j < n.neighbours.length; j++) {
                     if (G.nodeArray[n.neighbours[j]].active) {
                         neighbours.add(n.neighbours[j]);
                         int cnt = 0;
-                        for (LinkedList<Integer> list : neighbourLists){
-                            if (!list.contains(j)) notPartners[cnt] = true;
+                        for (LinkedList<Integer> list : neighbourLists) {
+                            if (!list.contains(n.neighbours[j])) notPartners[cnt] = true;
                             cnt++;
                         }
                     }
                 }
-                for (int j = 0; j < notPartners.length; j++) if (!notPartners[j]){
-                    int v = deg3nodes.get(j);
-                    if (v == -1) continue;
-                    for (int id : neighbours) removeVCNodes(G.nodeArray[id]);
-                    removeUselessNodes(G.nodeArray[i]);
-                    removeUselessNodes(G.nodeArray[v]);
-                    break;
-                }
-                deg3nodes.add(i);
+                boolean cut = false;
+                for (int j = 0; j < notPartners.length; j++)
+                    if (!notPartners[j]) {
+                        int first = neighbours.getFirst();
+                        int second = neighbours.get(1);
+                        int third = neighbours.get(2);
+                        int v = deg3nodes.get(j);
+                        if (v == -1) continue;
+                        twincuts++;
+                        if (!arrayContains(G.nodeArray[first].neighbours, second) && !arrayContains(G.nodeArray[first].neighbours,third) && !arrayContains(G.nodeArray[second].neighbours, third)){
+                            removeUselessNodes(G.nodeArray[second]);
+                            removeUselessNodes(G.nodeArray[third]);
+                            removeVCNodes(G.nodeArray[v]);
+                            removeVCNodes(G.nodeArray[i]);
+                            mergeNodes(G.nodeArray[first], G.nodeArray[second]);
+                            mergeNodes(G.nodeArray[first], G.nodeArray[third]);
+                            mergedNodes.push(new int[]{first, second, v});
+                            mergedNodes.push(new int[]{first, third, i});
+                        }
+                        else {
+                            for (int id : neighbours) removeVCNodes(G.nodeArray[id]);
+                            removeUselessNodes(G.nodeArray[i]);
+                            removeUselessNodes(G.nodeArray[v]);
+                        }
+                        deg3nodes.set(j, -1);
+                        cut = true;
+                        break;
+                    }
+                if (cut) deg3nodes.add(-1);
+                else deg3nodes.add(i);
                 neighbourLists.add(neighbours);
             }
         }
         return false;
     }
 
-    public boolean improvedLP(Graph G){
+    public boolean improvedLP(Graph G) {
         boolean changed = false;
         hk.searchForAMatching();
         int size = hk.size;
@@ -115,17 +139,18 @@ public class Reduction {
         LinkedList<Integer>[] residualGraph = new LinkedList[bipartiteSize + 2];//the residual graph is saved in an array of linked lists as adjacency lists.
         residualGraph[bipartiteSize] = new LinkedList<>(); // add s and t nodes
         residualGraph[bipartiteSize + 1] = new LinkedList<>();
-        for (int i = 0; i < size; i++){
+        for (int i = 0; i < size; i++) {
             residualGraph[i] = new LinkedList<>();
             if (G.nodeArray[i].active) {
-                for (Integer integer : G.nodeArray[i].neighbours) if (G.nodeArray[integer].active) residualGraph[i].add(integer + size);
+                for (Integer integer : G.nodeArray[i].neighbours)
+                    if (G.nodeArray[integer].active) residualGraph[i].add(integer + size);
                 if (hk.pair[i] == hk.nil) residualGraph[bipartiteSize].add(i);
                 else residualGraph[i].add(bipartiteSize);
             }
         }
-        for (int i = G.nodeArray.length; i < bipartiteSize; i++){
+        for (int i = G.nodeArray.length; i < bipartiteSize; i++) {
             residualGraph[i] = new LinkedList<>();
-            if (G.nodeArray[i - size].active){
+            if (G.nodeArray[i - size].active) {
                 if (hk.pair[i] == hk.nil) residualGraph[i].add(bipartiteSize + 1);
                 else {
                     residualGraph[bipartiteSize + 1].add(i);
@@ -137,67 +162,66 @@ public class Reduction {
         //run BFS to find nodes reached from s:
         Queue<Integer> q = new LinkedList<>();
         q.offer(bipartiteSize);
-        while (!q.isEmpty()){
+        while (!q.isEmpty()) {
             int v = q.poll();
             reachedFromS[v] = true;
-            for (int w : residualGraph[v]){
-                if (!reachedFromS[w]){
+            for (int w : residualGraph[v]) {
+                if (!reachedFromS[w]) {
                     reachedFromS[w] = true;
                     q.offer(w);
                 }
             }
         }
-            for (int i = 0; i < size; i++) {
-                if (G.nodeArray[i].active) {
-                    if (!reachedFromS[i] && reachedFromS[i + size]) removeVCNodes(G.nodeArray[i]); //LP solution = 1
-                    else if (reachedFromS[i] && !reachedFromS[i + size]) removeUselessNodes(G.nodeArray[i]); //LP solution = 0
+        for (int i = 0; i < size; i++) {
+            if (G.nodeArray[i].active) {
+                if (!reachedFromS[i] && reachedFromS[i + size]) removeVCNodes(G.nodeArray[i]); //LP solution = 1
+                else if (reachedFromS[i] && !reachedFromS[i + size])
+                    removeUselessNodes(G.nodeArray[i]); //LP solution = 0
+            }
+        }
+        while (true) {
+            VeryStrongComponentsFinder vscf = new VeryStrongComponentsFinder(hk.B, residualGraph);
+            LinkedList<LinkedList<Integer>> scc = vscf.findStrongComponents();
+            if (scc.isEmpty()) break;
+            for (LinkedList<Integer> component : scc) {
+                for (int n : component) {
+                    lpcuts++;
+                    changed = true;
+                    if (n < size) {
+                        if (G.nodeArray[n].active) removeUselessNodes(G.nodeArray[n]);
+                        else break;
+                    } else if (n < bipartiteSize)
+                        if (G.nodeArray[n - size].active) removeVCNodes(G.nodeArray[n - size]);
+                        else break;
                 }
             }
-            while (true) {
-                VeryStrongComponentsFinder vscf = new VeryStrongComponentsFinder(hk.B, residualGraph);
-                LinkedList<LinkedList<Integer>> scc = vscf.findStrongComponents();
-                if (scc.isEmpty()) break;
-                for (LinkedList<Integer> component : scc) {
-                    for (int n : component) {
-                        lpcuts++;
-                        changed = true;
-                        if (n < size) {
-                            if (G.nodeArray[n].active) removeUselessNodes(G.nodeArray[n]);
-                            else break;
-                        } else if (n < bipartiteSize)
-                            if (G.nodeArray[n - size].active) removeVCNodes(G.nodeArray[n - size]);
-                            else break;
-                    }
-                }
-                }
-            return changed;
-            }
+        }
+        return changed;
+    }
 
 
-    public boolean removeDegreeTwo(){
+    public boolean removeDegreeTwo() {
         boolean changed = false;
-        for (Node node : G.nodeArray){
-            if (node.active && node.activeNeighbours == 2){
+        for (Node node : G.nodeArray) {
+            if (node.active && node.activeNeighbours == 2) {
                 changed = true;
                 deg2cuts++;
                 Node first = null, second = null;
                 int it = 0;
-                while (first == null){
+                while (first == null) {
                     Node current = G.nodeArray[node.neighbours[it++]];
                     if (current.active) first = current;
                 }
-                while (second == null){
+                while (second == null) {
                     Node current = G.nodeArray[node.neighbours[it++]];
                     if (current.active) second = current;
                 }
-                if (!arrayContains(first.neighbours, second.id)){
-                    mergeNodes(first, second, node); // case v,w \not \in E
-                    /*LinkedList<Node> a = new LinkedList<>();
-                    a.add(second);
-                    a.add(node);
-                    hk.updateAddNodes(a);*/
-                }
-                else{ // case v,w \in E
+                if (!arrayContains(first.neighbours, second.id)) {
+                    removeVCNodes(node);
+                    removeUselessNodes(second);
+                    mergeNodes(first, second); // case v,w \not \in E
+                    mergedNodes.push(new int[]{first.id, second.id, node.id});
+                } else { // case v,w \in E
                     removeUselessNodes(node);
                     removeVCNodes(first);
                     removeVCNodes(second);
@@ -207,21 +231,64 @@ public class Reduction {
         return changed;
     }
 
-    public void removeDegreeLargerKAndZero(Graph G, int k){
-        LinkedList<Node> partialSolution = new LinkedList<>();
-        for (Node node : G.nodeArray){
-            if (node.activeNeighbours > k){
-                partialSolution.add(node);
-                G.removeNode(node);
-                removedNodes.push(new int[]{2,node.id});
+    private void removeDegreeX(int k) {
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+        for (Node node : G.nodeArray) {
+            if (!node.active) continue;
+            if (node.activeNeighbours == 1) {
+                deg1cuts++;
+                int i = 0;
+                while (!G.nodeArray[node.neighbours[i]].active) {
+                    i++;
+                }
+                Node neighbour = G.nodeArray[node.neighbours[i]];
+                removeVCNodes(neighbour);
+                removeUselessNodes(node);
+                changed = true;
+                break;
             }
-            else if (node.activeNeighbours == 0){
-                G.removeNode(node);
-                removedNodes.push(new int[]{1, node.id});
+            if (node.activeNeighbours == 2) {
+                deg2cuts++;
+                Node first = null, second = null;
+                int it = 0;
+                while (first == null) {
+                    Node current = G.nodeArray[node.neighbours[it++]];
+                    if (current.active) first = current;
+                }
+                while (second == null) {
+                    Node current = G.nodeArray[node.neighbours[it++]];
+                    if (current.active) second = current;
+                }
+                if (!arrayContains(first.neighbours, second.id)) {
+                    removeVCNodes(node);
+                    removeUselessNodes(second);
+                    mergeNodes(first, second); // case v,w \not \in E
+                    mergedNodes.push(new int[]{first.id, second.id, node.id});
+                } else { // case v,w \in E
+                    removeUselessNodes(node);
+                    removeVCNodes(first);
+                    removeVCNodes(second);
+                }
+                changed = true;
+                break;
+            }
+            if (node.activeNeighbours > k) {
+                removeVCNodes(node);
+                changed = true;
+                break;
+            }
+            if (node.activeNeighbours == 0) {
+                deg0cuts++;
+                removeUselessNodes(node);
+                changed = true;
+                break;
             }
         }
-        G.partialSolution.addAll(partialSolution);
     }
+
+}
 
     public void revertReduction() {
         int[] action = removedNodes.pop();
@@ -242,8 +309,8 @@ public class Reduction {
                     hk.updateAddNodes(b);
                     break;
                 case 3: //merged Nodes :(
-                    VCNodes.remove(G.nodeArray[action[3]]);
-                    int[] newArray = new int[node.neighbours.length - action[4]];
+                    //VCNodes.remove(G.nodeArray[action[3]]);
+                    int[] newArray = new int[node.neighbours.length - action[3]];
                     System.arraycopy(node.neighbours, 0, newArray, 0, newArray.length);
                     for (int i = newArray.length; i < node.neighbours.length; i++){
                         Node neighbour = G.nodeArray[node.neighbours[i]];
@@ -300,7 +367,7 @@ public class Reduction {
     }
 
     private boolean BussRule(int k){
-        return (G.activeNodes > (k * k) + k || G.totalEdges > k * k);
+        return (G.activeNodes > ((long) k * (long) k) + (long) k || G.totalEdges > (long) k * (long) k);
     }
 
     public int reduceThroughCC(CliqueCover cc, int k, Graph G){
@@ -350,15 +417,11 @@ public class Reduction {
     /**
      * @param nodeA node to be merged and to remain active
      * @param nodeB node to be merged into nodeA
-     * @param nodeC node with two neighbours nodeA and nodeB
-     * @implNote     merges nodeB into nodeA, adds nodeC to the vertex cover and saves the action
+     * @implNote     merges nodeB into nodeA
      *              (Array resizing is done here!)
      */
-    private void mergeNodes(Node nodeA, Node nodeB, Node nodeC){
-        merged = true;
+    private void mergeNodes(Node nodeA, Node nodeB){
         LinkedList<Integer> addedNeighbours = new LinkedList<>();
-        removeVCNodes(nodeC);
-        removeUselessNodes(nodeB);
         for (int n : nodeB.neighbours){
             Node neighbour = G.nodeArray[n];
             if (neighbour.active && !arrayContains(nodeA.neighbours, n)){
@@ -380,9 +443,8 @@ public class Reduction {
             newArray[j++] = id;
         }
         nodeA.neighbours = newArray;
-        removedNodes.push(new int[]{3, nodeA.id, nodeB.id, nodeC.id, addedNeighbours.size()});
+        removedNodes.push(new int[]{3, nodeA.id, nodeB.id, addedNeighbours.size()});
         nodeA.activeNeighbours += addedNeighbours.size();
-        mergedNodes.push(new int[]{nodeA.id, nodeB.id, nodeC.id});
         hk.updateMergeNodes(nodeA.id, nodeB.id, addedNeighbours);
     }
 
