@@ -88,7 +88,7 @@ public class Algorithms {
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
-        int l = reduction.rollOutAll(k, depth % 4 == -1);
+        int l = reduction.rollOutAll(k, depth % 25 == 0);
         k -= l;
         if (k < 0) {
             return null;
@@ -96,20 +96,20 @@ public class Algorithms {
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
-        long time = System.nanoTime();
+        //long time = System.nanoTime();
         hk.searchForAMatching();
-        totalTimeHK += System.nanoTime() - time;
+        //totalTimeHK += System.nanoTime() - time;
         if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
             totalBranchCutsHK++;
 
             return null;
         }
-        time = System.nanoTime();
+        //time = System.nanoTime();
         if (doCliqueCover) {
             cc = new CliqueCover(G);
             if (k < cc.cliqueCoverIterations(1, 2, lastPerm)) {
                 totalBranchCutsCC++;
-                totalTimeCC += System.nanoTime() - time;
+                //totalTimeCC += System.nanoTime() - time;
                 return null;
             }
             //k = reduction.reduceThroughCC(cc, k, G);
@@ -122,7 +122,7 @@ public class Algorithms {
             }
 
             lastPerm = cc.permutation;
-            totalTimeCC += System.nanoTime() - time;
+            //totalTimeCC += System.nanoTime() - time;
         }
         LinkedList<Node> S = new LinkedList<>();
         LinkedList<Node> neighbours = new LinkedList<>();
@@ -173,13 +173,13 @@ public class Algorithms {
                     }
                     Sthread = exec.submit(new Worker((Graph) G.clone(), k - neighbours.size(), (HopcroftKarp) hk.clone(), firstActiveNode, this, lastPerm_copy));
                 } else {
-                    S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm, ++depth); //the returned cover
+                    S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm, depth++); //the returned cover
                     if(S==null){
                         reduction.revertReduction();
                     }
                 }
             }else{
-                S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm, ++depth); //the returned cover
+                S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm, depth++); //the returned cover
                 if(S==null){
                     reduction.revertReduction();
                 }
@@ -202,7 +202,7 @@ public class Algorithms {
         LinkedList<Node> ll = new LinkedList<>();
         ll.add(v);
         hk.updateDeleteNodes(ll);
-        S = vc_branch_nodes(G, k - 1, firstActiveNode,hk, lastPerm,depth); //the returned cover
+        S = vc_branch_nodes(G, k - 1, firstActiveNode,hk, lastPerm,depth++); //the returned cover
         if(S==null){
             reduction.revertReduction();
         }

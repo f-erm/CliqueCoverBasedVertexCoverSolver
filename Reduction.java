@@ -39,31 +39,32 @@ public class Reduction {
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
             removeDegreeOne();
-            deg1Time += System.nanoTime() - time;
-            time = System.nanoTime();
+            //deg1Time += System.nanoTime() - time;
+            //time = System.nanoTime();
             removeDegreeTwo();
             //removeTwin();
             if (VCNodes.size() - oldK > k) return k + 1;
-            deg2Time += System.nanoTime() - time;
-            time = System.nanoTime();
+            //deg2Time += System.nanoTime() - time;
+            //time = System.nanoTime();
             if (doReduction) applyUnconfined();
+            removeDegreeOne();
             if (VCNodes.size() - oldK > k) return k + 1;
-            unconfTime += System.nanoTime() - time;
-            time = System.nanoTime();
+            //unconfTime += System.nanoTime() - time;
+            //time = System.nanoTime();
             //removeDegreeZero();
             if (doReduction) improvedLP(G);
             if (VCNodes.size() - oldK > k) return k + 1;
-            lpTime += System.nanoTime() - time;
-            time = System.nanoTime();
+            //lpTime += System.nanoTime() - time;
+            //time = System.nanoTime();
             removeDegreeZero();
-            deg0Time += System.nanoTime() - time;
-            time = System.nanoTime();
+            //deg0Time += System.nanoTime() - time;
+            //time = System.nanoTime();
             if (BussRule(k)) {
-                busscuts++;
+            //    busscuts++;
                 return k + 1;
             }
-            bussTime += System.nanoTime() - time;
-            time = System.nanoTime();
+            //bussTime += System.nanoTime() - time;
+            //time = System.nanoTime();
             boolean changed = true;
         while (changed){
             changed = removeDegreeOne();
