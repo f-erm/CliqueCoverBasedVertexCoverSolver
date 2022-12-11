@@ -38,7 +38,7 @@ public class Algorithms {
         bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
         long time = System.nanoTime();
-        for (int i = 0; i < G.activeNodes && (System.nanoTime() - time)/1024 < 10000000; i++){
+        for (int i = 0; i < G.activeNodes * 20 && (System.nanoTime() - time)/1024 < 10000000; i++){
             cc.cliqueCoverIterations(10, 5, null);
             if (cc.lowerBound > bestLowerBound){
                 bestLowerBound = cc.lowerBound;
