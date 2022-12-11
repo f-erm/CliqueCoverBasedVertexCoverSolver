@@ -250,6 +250,7 @@ public class Reduction {
                             if (neighbour.neighbours[j] == node.id) {
                                 neighbour.neighbours[j] = action[2];
                                 neighbour.activeNeighbours--;
+                                node.activeNeighbours--;
                                 G.totalEdges--;
                                 break;
                             }
@@ -257,13 +258,6 @@ public class Reduction {
                     }
                     node.neighbours = newArray;
                     mergedNodes.pop();
-                    node.activeNeighbours -= action[4];
-                    G.reeaddNode(G.nodeArray[action[2]]);
-                    G.reeaddNode(G.nodeArray[action[3]]);
-                    LinkedList<Node> ll = new LinkedList<>();
-                    ll.add(G.nodeArray[action[2]]);
-                    ll.add(G.nodeArray[action[3]]);
-                    hk.updateAddNodes(ll);
                     break;
             }
             action = removedNodes.pop();
@@ -291,6 +285,7 @@ public class Reduction {
                 }
             }
         }
+
         return allInAllChanged;
     }
 
@@ -361,13 +356,8 @@ public class Reduction {
     private void mergeNodes(Node nodeA, Node nodeB, Node nodeC){
         merged = true;
         LinkedList<Integer> addedNeighbours = new LinkedList<>();
-        G.removeNode(nodeC);
-        G.removeNode(nodeB);
-        LinkedList<Node> a = new LinkedList<>();
-        a.add(nodeC);
-        a.add(nodeB);
-        hk.updateDeleteNodes(a);
-        VCNodes.add(nodeC);
+        removeVCNodes(nodeC);
+        removeUselessNodes(nodeB);
         for (int n : nodeB.neighbours){
             Node neighbour = G.nodeArray[n];
             if (neighbour.active && !arrayContains(nodeA.neighbours, n)){

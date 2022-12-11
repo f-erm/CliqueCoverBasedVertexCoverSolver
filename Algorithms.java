@@ -46,7 +46,7 @@ public class Algorithms {
 
         }
         System.out.println("#Clique Cover Quality: " + bestLowerBound);
-        int k = Math.max(hk.lastLowerBound, bestLowerBound);
+        int k = Math.max(hk.totalCycleLB, bestLowerBound);
         k = reduction.reduceThroughCC(cc, k, G);
 
         if (k < 0) return null;
@@ -99,7 +99,7 @@ public class Algorithms {
         long time = System.nanoTime();
         hk.searchForAMatching();
         totalTimeHK += System.nanoTime() - time;
-        if (k < hk.lastLowerBound /*|| k < hk.totalCycleLB*/) {
+        if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
             totalBranchCutsHK++;
 
             return null;

@@ -245,10 +245,11 @@ public class HopcroftKarp implements Cloneable {
                 }
             }
         }
-        lastLowerBound = matching/2;
         boolean[] inCycle = new boolean[size];
         totalCycleLB = 0;
+        matching = 0;
         for (int i = 0; i < size; i++){
+            if (pair[i] != nil) matching++;
             if (!inCycle[i] && B.nodeArray[i].active && pair[i] != nil){
                 int cycleLB = 1;
                 int partner = pair[i];
@@ -262,9 +263,10 @@ public class HopcroftKarp implements Cloneable {
                     partner = pair[partner - size];
                     cycleLB++;
                 }
-                totalCycleLB += (cycleLB + 1)/ 2;
+                totalCycleLB += (cycleLB)/ 2;
             }
         }
+        lastLowerBound = matching/2;
     }
 
     @Override
