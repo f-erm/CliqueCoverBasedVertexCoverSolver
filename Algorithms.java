@@ -31,12 +31,13 @@ public class Algorithms {
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
         reduction = new Reduction(G, hk);
-        //int l = reduction.rollOutAll(G.activeNodes, true);
+        int l = reduction.rollOutAll(G.activeNodes, true);
+        hk.searchForAMatching();
         cc = new CliqueCover(G);
         cc.cliqueCoverIterations(10, 5, null);
         bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
-        for (int i = 0; i < 250; i++){
+        for (int i = 0; i < 2500; i++){
             cc.cliqueCoverIterations(10, 5, null);
             if (cc.lowerBound > bestLowerBound){
                 bestLowerBound = cc.lowerBound;
@@ -44,19 +45,16 @@ public class Algorithms {
             }
 
         }
-        int k = Math.max(hk.lastLowerBound, bestLowerBound) + G.partialSolution.size();
+        System.out.println("#Clique Cover Quality: " + bestLowerBound);
+        int k = Math.max(hk.lastLowerBound, bestLowerBound);
         k = reduction.reduceThroughCC(cc, k, G);
 
         if (k < 0) return null;
-        if (G.totalEdges == 0) {
-            G.partialSolution.addAll(reduction.VCNodes);
-            return G.partialSolution;
-        }
         while (true) {
             if (totalBranchCutsHK > 50 && totalBranchCutsHK > totalBranchCutsCC) doCliqueCover = false;
-            System.out.println("# k is " + k);
+            System.out.println("# k is " + (k + G.partialSolution.size() + l));
             System.out.println("# recursiveSteps " + recursiveSteps);
-            LinkedList<Node> S = vc_branch_nodes(G, k - G.partialSolution.size(), 0,hk, bestPermutation, 0);
+            LinkedList<Node> S = vc_branch_nodes(G, k, 0, hk, bestPermutation, 0);
             if (S != null) {
                 S.addAll(reduction.VCNodes);
                 while (!reduction.mergedNodes.isEmpty()){
@@ -90,7 +88,7 @@ public class Algorithms {
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
-        int l = reduction.rollOutAll(k, depth % 1 == 0);
+        int l = reduction.rollOutAll(k, depth % 4 == -1);
         k -= l;
         if (k < 0) {
             return null;
@@ -101,7 +99,7 @@ public class Algorithms {
         long time = System.nanoTime();
         hk.searchForAMatching();
         totalTimeHK += System.nanoTime() - time;
-        if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
+        if (k < hk.lastLowerBound /*|| k < hk.totalCycleLB*/) {
             totalBranchCutsHK++;
 
             return null;

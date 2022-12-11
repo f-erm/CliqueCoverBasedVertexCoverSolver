@@ -42,10 +42,11 @@ public class Reduction {
             deg1Time += System.nanoTime() - time;
             time = System.nanoTime();
             removeDegreeTwo();
+            //removeTwin();
             if (VCNodes.size() - oldK > k) return k + 1;
             deg2Time += System.nanoTime() - time;
             time = System.nanoTime();
-            applyUnconfined();
+            if (doReduction) applyUnconfined();
             if (VCNodes.size() - oldK > k) return k + 1;
             unconfTime += System.nanoTime() - time;
             time = System.nanoTime();
@@ -72,6 +73,38 @@ public class Reduction {
         return VCNodes.size() - oldK;
     }
 
+    public boolean removeTwin(){
+        LinkedList<LinkedList<Integer>> neighbourLists = new LinkedList<>();
+        LinkedList<Integer> deg3nodes = new LinkedList<>();
+        for (int i = 0; i < G.nodeArray.length; i++){
+            Node n = G.nodeArray[i];
+            if (n.active && n.activeNeighbours == 3){
+                LinkedList<Integer> neighbours = new LinkedList<>();
+                boolean[] notPartners = new boolean[neighbourLists.size()];
+                for (int j = 0; j < n.neighbours.length; j++){
+                    if (G.nodeArray[n.neighbours[j]].active) {
+                        neighbours.add(n.neighbours[j]);
+                        int cnt = 0;
+                        for (LinkedList<Integer> list : neighbourLists){
+                            if (!list.contains(j)) notPartners[cnt] = true;
+                            cnt++;
+                        }
+                    }
+                }
+                for (int j = 0; j < notPartners.length; j++) if (!notPartners[j]){
+                    int v = deg3nodes.get(j);
+                    if (v == -1) continue;
+                    for (int id : neighbours) removeVCNodes(G.nodeArray[id]);
+                    removeUselessNodes(G.nodeArray[i]);
+                    removeUselessNodes(G.nodeArray[v]);
+                    break;
+                }
+                deg3nodes.add(i);
+                neighbourLists.add(neighbours);
+            }
+        }
+        return false;
+    }
 
     public boolean improvedLP(Graph G){
         boolean changed = false;
