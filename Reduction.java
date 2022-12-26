@@ -42,7 +42,7 @@ public class Reduction {
             //removeDegreeOne();
             //deg1Time += System.nanoTime() - time;
             //time = System.nanoTime();
-            //removeDegreeTwo();
+            removeDegreeTwo();
             removeDegreeX(k);
             if (doReduction) removeTwin();
             if (VCNodes.size() - oldK > k) return k + 1;
@@ -402,7 +402,10 @@ public class Reduction {
         G.removeNode(node);
         LinkedList<Node> a = new LinkedList<>();
         a.add(node);
-        hk.updateDeleteNodes(a);
+        //for the heuristic we don't need to compute hk, so it is null
+        if(hk != null){
+            hk.updateDeleteNodes(a);
+        }
     }
 
     private void removeVCNodes(Node node){
@@ -411,7 +414,10 @@ public class Reduction {
         G.removeNode(node);
         LinkedList<Node> a = new LinkedList<>();
         a.add(node);
-        hk.updateDeleteNodes(a);
+        //for the heuristic we don't need to compute hk, so it is null
+        if(hk != null){
+            hk.updateDeleteNodes(a);
+        }
     }
 
     /**
@@ -445,7 +451,10 @@ public class Reduction {
         nodeA.neighbours = newArray;
         removedNodes.push(new int[]{3, nodeA.id, nodeB.id, addedNeighbours.size()});
         nodeA.activeNeighbours += addedNeighbours.size();
-        hk.updateMergeNodes(nodeA.id, nodeB.id, addedNeighbours);
+        //for the heuristic we don't need to compute hk, so it is null
+        if(hk != null){
+            hk.updateMergeNodes(nodeA.id, nodeB.id, addedNeighbours);
+        }
     }
 
     private boolean arrayContains(int[] array, int el){
