@@ -1,5 +1,8 @@
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.ListIterator;
+import java.util.Queue;
+
 public class Graph implements Cloneable{
 
     LinkedList<OldNode> oldNodeList; //for the beginning only
@@ -9,9 +12,11 @@ public class Graph implements Cloneable{
     LinkedList<Node> partialSolution;
     int totalEdges;
     int activeNodes;
+    Queue<Integer> dominatingNodes = new LinkedList<>();
     public Graph(){
         nodeHashMap = new HashMap<>();
         totalEdges = 0;
+        dominatingNodes = new LinkedList<>();
     }
 
     /**
@@ -39,9 +44,31 @@ public class Graph implements Cloneable{
         n.active = false;
         for (int i = 0; i < n.neighbours.length; i++){
             nodeArray[n.neighbours[i]].activeNeighbours--;
+            if (n.triangleCounts[i] > 0) nodeArray[n.neighbours[i]].triangleCounts[n.neighbourPositions[i]] = 0;
         }
         totalEdges = totalEdges - n.activeNeighbours;
         activeNodes --;
+        //keep triangle-numbers up-to-date. Also maintain dynamic list of dominated vertices dominatingNodes.
+        ListIterator<Integer> li = n.triangles.listIterator();
+        while(li.hasNext()){
+            int a = n.neighbours[li.next()];
+            int b = n.neighbours[li.next()];
+            int pos = li.next();
+            if (!nodeArray[a].active || !nodeArray[b].active) continue;
+            if (pos >= nodeArray[a].neighbours.length || nodeArray[a].neighbours[pos] != b) pos = findInArray(nodeArray[a].neighbours, b);
+            if (nodeArray[a].active && nodeArray[b].active) {
+                nodeArray[a].triangleCounts[pos]--;
+                nodeArray[b].triangleCounts[nodeArray[a].neighbourPositions[pos]]--;
+                if (nodeArray[a].triangleCounts[pos] + 1 == nodeArray[a].activeNeighbours){
+                    dominatingNodes.offer(b);
+                    dominatingNodes.offer(a);
+                }
+                else if (nodeArray[b].triangleCounts[nodeArray[a].neighbourPositions[pos]] + 1 == nodeArray[b].activeNeighbours){
+                    dominatingNodes.offer(a);
+                    dominatingNodes.offer(b);
+                }
+            }
+        }
     }
 
     /**
@@ -52,11 +79,27 @@ public class Graph implements Cloneable{
         n.active = true;
         for (int i = 0; i < n.neighbours.length; i++){
             nodeArray[n.neighbours[i]].activeNeighbours++;
+            if (nodeArray[i].active && n.triangleCounts[i] > 0) nodeArray[n.neighbours[i]].triangleCounts[n.neighbourPositions[i]] = n.triangleCounts[i];
         }
         totalEdges += n.activeNeighbours;
         activeNodes ++;
+        //keep triangle-numbers up-to-date.
+        ListIterator<Integer> li = n.triangles.listIterator();
+        while(li.hasNext()){
+            int a = n.neighbours[li.next()];
+            int b = n.neighbours[li.next()];
+            int pos = li.next();
+            if (pos >= nodeArray[a].neighbours.length || nodeArray[a].neighbours[pos] != b) pos = findInArray(nodeArray[a].neighbours, b);
+            if (nodeArray[a].active && nodeArray[b].active) {
+                nodeArray[a].triangleCounts[pos]++;
+                nodeArray[b].triangleCounts[nodeArray[a].neighbourPositions[pos]]++;
+            }
+        }
     }
-
+private int findInArray(int[] array, int el){
+        for (int i = 0; i < array.length; i++) if (array[i] == el) return i;
+        return -1;
+}
 
     /**
      *     ---only used for reductions/preprocessing---

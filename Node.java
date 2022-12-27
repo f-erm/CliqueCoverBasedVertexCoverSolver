@@ -1,10 +1,15 @@
+import java.util.LinkedList;
+
 public class Node implements Comparable<Node>, Cloneable{
     String name;
     int id;
     int[] neighbours;
+    int[] neighbourPositions;
+    int[] triangleCounts;
     boolean active;
     int activeNeighbours;
     int color;
+    LinkedList<Integer> triangles;
     //the next attributes are necessary to find the strong connected components
 
 
@@ -18,9 +23,13 @@ public class Node implements Comparable<Node>, Cloneable{
         id = oldNode.id;
         activeNeighbours = oldNode.neighbors.size();
         neighbours = new int[activeNeighbours];
+        neighbourPositions = new int[activeNeighbours];
+        triangleCounts = new int[activeNeighbours];
+        triangles = new LinkedList<>();
         int i = 0;
         for (OldNode n : oldNode.neighbors) {
-            neighbours[i++] = n.id;
+            neighbours[i] = n.id;
+            neighbourPositions[i++] = n.neighbors.indexOf(oldNode);
         }
     }
 

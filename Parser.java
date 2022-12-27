@@ -60,7 +60,52 @@ public class Parser {
             g.activeNodes++;
             g.nodeArray[i++] = n;
         }
+        for (Node n : g.nodeArray){ // find initial triangles in the graph
+            int cu = 0;
+            for (int u : n.neighbours){
+                if (n.id > u){
+                    cu++;
+                    continue;
+                }
+                int cv = 0;
+                for (int v : g.nodeArray[u].neighbours){
+                    if (u > v){
+                        cv++;
+                        continue;
+                    }
+                    int cont = arrayContains(n.neighbours, v);
+                    if (cont >= 0){
+                        n.triangleCounts[cu]++;
+                        n.triangles.add(cu);
+                        n.triangles.add(cont);
+                        n.triangles.add(cv);
+                        g.nodeArray[u].triangles.add(n.neighbourPositions[cu]);
+                        g.nodeArray[u].triangles.add(cv);
+                        g.nodeArray[u].triangles.add(cont);
+                        g.nodeArray[v].triangles.add(n.neighbourPositions[cont]);
+                        g.nodeArray[v].triangles.add(g.nodeArray[u].neighbourPositions[cv]);
+                        g.nodeArray[v].triangles.add(cu);
+                        g.nodeArray[u].triangleCounts[n.neighbourPositions[cu]]++;
+                        g.nodeArray[u].triangleCounts[cv]++;
+                        g.nodeArray[v].triangleCounts[g.nodeArray[u].neighbourPositions[cv]]++;
+                        n.triangleCounts[cont]++;
+                        g.nodeArray[v].triangleCounts[n.neighbourPositions[cont]]++;
+                    }
+                    cv++;
+                }
+                cu++;
+            }
+        }
         return g;
+    }
+
+    private static int arrayContains(int[] array, int el){
+        int j = 0;
+        for (int i : array) {
+            if (i == el) return j;
+            j++;
+        }
+        return -1;
     }
 
 }

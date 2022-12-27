@@ -89,7 +89,7 @@ public class Algorithms {
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
-        int l = reduction.rollOutAll(k, depth % 25 == 9);
+        int l = reduction.rollOutAll(k, depth % 25 == -9);
         k -= l;
         if (k < 0) {
             return null;
@@ -100,7 +100,7 @@ public class Algorithms {
         //long time = System.nanoTime();
         hk.searchForAMatching();
         //totalTimeHK += System.nanoTime() - time;
-        if (k < hk.lastLowerBound || k < hk.totalCycleLB) {
+        if (k < hk.totalCycleLB) {
             totalBranchCutsHK++;
 
             return null;
@@ -181,7 +181,7 @@ public class Algorithms {
                 }
             }else{
                 S = vc_branch_nodes(G, k - neighbours.size(), firstActiveNode, hk, lastPerm, depth++); //the returned cover
-                if(S==null){
+                if(S==null && reduction.removedNodes != null && !reduction.removedNodes.isEmpty()){
                     reduction.revertReduction();
                 }
             }
@@ -204,7 +204,7 @@ public class Algorithms {
         ll.add(v);
         hk.updateDeleteNodes(ll);
         S = vc_branch_nodes(G, k - 1, firstActiveNode,hk, lastPerm,depth++); //the returned cover
-        if(S==null){
+        if(S==null && reduction.removedNodes != null && !reduction.removedNodes.isEmpty()){
             reduction.revertReduction();
         }
         recursiveSteps++;

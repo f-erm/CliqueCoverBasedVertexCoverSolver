@@ -8,12 +8,8 @@ public class HopcroftKarp implements Cloneable {
     int nil; //size of the bipartite graph and index position of nil node
     int[] pair; //matching partner of each node
     int[] dist;
-    int matching;
-    int lastLowerBound;
     Queue<Node> Q;
     Stack<int[]> states;
-    Stack<Integer> numMatching;
-    Stack<Integer> numLastLowerBound;
     Stack<int[]> dists;
     Stack<int[]> actions;
     Stack<int[]> oldNeighbourLists;
@@ -53,15 +49,12 @@ public class HopcroftKarp implements Cloneable {
         states = new Stack<>();
         dists = new Stack<>();
         oldNeighbourLists = new Stack<>();
-        numLastLowerBound = new Stack<>();
-        numMatching = new Stack<>(); //save all changes for efficient readding
         actions = new Stack<>();
         pair = new int[size * 2 + 1];
         for (int j = 0; j <= nil; j++) {
             pair[j] = nil;
         }
         dist = new int[size * 2 + 1];
-        matching = 0;
         searchForAMatching();
     }
 
@@ -130,16 +123,9 @@ public class HopcroftKarp implements Cloneable {
      */
     public void updateDeleteNodes(LinkedList<Node> nodes) {
         actions.push(new int[]{0});
-        numMatching.push(matching);
         for (Node node : nodes) {
             Node partnerV = B.nodeArray[pair[node.id]];
             Node partnerU = B.nodeArray[pair[node.id + size]];
-            if (partnerU.id != nil) {
-                matching--;
-            }
-            if (pair[node.id] != nil) {
-                matching--;
-            }
             actions.push(new int[]{2, node.id, partnerV.id, partnerU.id});
             pair[partnerU.id] = nil;
             pair[node.id] = nil;
@@ -158,8 +144,8 @@ public class HopcroftKarp implements Cloneable {
         System.arraycopy(a.neighbours, 0, newArray2, 0, a.neighbours.length);
         int j = a.neighbours.length;
         for (int neighbour : toAdd) {
-            newArray[j] = nodeA + size;
-            newArray2[j++] = nodeA;
+            newArray[j] = neighbour + size;
+            newArray2[j++] = neighbour;
             Node n = B.nodeArray[neighbour];
             for (int i = 0; i < n.neighbours.length; i++) {
                 if (n.neighbours[i] == nodeB + size) {
@@ -192,7 +178,6 @@ public class HopcroftKarp implements Cloneable {
             B.nodeArray[node.id].active = true;
             B.nodeArray[node.id + size].active = true;
         }
-        matching = numMatching.pop();
         int[] action = actions.pop();
         while (action[0] != 0) {
             switch (action[0]) {
@@ -239,34 +224,33 @@ public class HopcroftKarp implements Cloneable {
         while (bfs()){
             for (int i = 0; i < size; i++){
                 if (pair[i] == nil && B.nodeArray[i].active){
-                    if (dfs(B.nodeArray[i])) {
-                        matching++;
-                    }
+                    dfs(B.nodeArray[i]);
                 }
             }
         }
         boolean[] inCycle = new boolean[size];
         totalCycleLB = 0;
-        matching = 0;
         for (int i = 0; i < size; i++){
-            if (pair[i] != nil) matching++;
             if (!inCycle[i] && B.nodeArray[i].active && pair[i] != nil){
                 int cycleLB = 1;
                 int partner = pair[i];
                 inCycle[i] = true;
                 while (partner != i + size){
-                    if (partner == nil || inCycle[partner - size]){
+                    if (partner == nil){
                         cycleLB--;
+                        break;
+                    }
+                    if (inCycle[partner - size]){
+                        cycleLB -= 2;
                         break;
                     }
                     inCycle[partner - size] = true;
                     partner = pair[partner - size];
                     cycleLB++;
                 }
-                totalCycleLB += (cycleLB)/ 2;
+                totalCycleLB += (cycleLB + 1)/ 2;
             }
         }
-        lastLowerBound = matching/2;
     }
 
     @Override
@@ -277,12 +261,8 @@ public class HopcroftKarp implements Cloneable {
         HKn.pair = (int[]) this.pair.clone();
         HKn.actions = (Stack<int[]>) this.actions.clone();
         HKn.dist = this.dist.clone();
-        HKn.matching = this.matching;
-        HKn.lastLowerBound = this.lastLowerBound;
         HKn.states = (Stack<int[]>) this.states.clone();
-        HKn.numMatching = (Stack<Integer>) this.numMatching.clone();
         HKn.dists = (Stack<int[]>) this.dists.clone();
-        HKn.numLastLowerBound = (Stack<Integer>) this.numLastLowerBound.clone();
         HKn.B = (Graph) this.B.clone();
         HKn.totalCycleLB = this.totalCycleLB;
          
