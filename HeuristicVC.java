@@ -3,10 +3,16 @@ import java.util.LinkedList;
 public class HeuristicVC {
     Graph G;
     Reduction reduction;
+    int counterOfInexactRed;
+    int inexactRed;
+    int exactRed;
 
     public HeuristicVC(Graph G){
         this.G = G;
-        reduction = new Reduction(G, null);
+        HopcroftKarp hk = new HopcroftKarp(G);
+        reduction = new Reduction(G, hk);
+        inexactRed = 0;
+        exactRed = 0;
     }
 
     /**
@@ -18,14 +24,24 @@ public class HeuristicVC {
     public LinkedList<Node> vc(boolean highestDegree){
         LinkedList<Node>vc = new LinkedList<>();
         int sizeOfOldVC = reduction.VCNodes.size();
+        counterOfInexactRed = 0;
+
+        //initial reduction
+        reduction.rollOutAll(Integer.MAX_VALUE,true);
+
+        
         while (G.totalEdges > 0){
 
             //check if an exact reduction can be applied
             boolean changed = true;
-            while (changed){
+            while (changed && counterOfInexactRed < 100){
                 reduction.rollOutAll(Integer.MAX_VALUE, false);
                 if (reduction.VCNodes.size() == sizeOfOldVC) {
                     changed = false;
+                }
+                else {
+                    exactRed ++;
+                    counterOfInexactRed = 0;
                 }
                 sizeOfOldVC = reduction.VCNodes.size();
             }
@@ -55,6 +71,8 @@ public class HeuristicVC {
                 }
                 vc.add(maxDegreeNode);
                 G.removeNode(maxDegreeNode);
+                counterOfInexactRed ++;
+                inexactRed ++;
             }
             else {
                 int minDegree = Integer.MAX_VALUE;
@@ -75,6 +93,8 @@ public class HeuristicVC {
                         }
                     }
                     G.removeNode(minDegreeNode);
+                    counterOfInexactRed ++;
+                    inexactRed ++;
                 }
             }
 
