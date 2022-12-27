@@ -69,8 +69,10 @@ public class HeuristicVC {
                 if(minDegreeNode != null){
                     for (int neighbourID: minDegreeNode.neighbours) {
                         Node u = G.nodeArray[neighbourID];
-                        vc.add(u);
-                        G.removeNode(u);
+                        if(u.active){
+                            vc.add(u);
+                            G.removeNode(u);
+                        }
                     }
                     G.removeNode(minDegreeNode);
                 }
