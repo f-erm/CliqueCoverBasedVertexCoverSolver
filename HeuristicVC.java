@@ -38,7 +38,7 @@ public class HeuristicVC {
         Arrays.sort(permutation);
         int degree;
         if (permutation.length > 0) degree = permutation[0].activeNeighbours;
-        else return reduction.VCNodes; // TODO das ist nur für jetzt
+        else degree = -1;
         borderIndices = new int[G.activeNodes];
         for (int i = 0; i < permutation.length; i++){
             posInPermutation[permutation[i].id] = i;
