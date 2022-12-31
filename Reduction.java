@@ -366,14 +366,14 @@ private void removeDominating(){
                     G.reeaddNode(node);
                     LinkedList<Node> a = new LinkedList<>();
                     a.add(node);
-                    hk.updateAddNodes(a);
+                    if (hk != null) hk.updateAddNodes(a);
                     break;
                 case 2: //useful Nodes
                     G.reeaddNode(node);
                     VCNodes.remove(node);
                     LinkedList<Node> b = new LinkedList<>();
                     b.add(node);
-                    hk.updateAddNodes(b);
+                    if (hk != null) hk.updateAddNodes(b);
                     break;
                 case 3: //merged Nodes :(
                     //VCNodes.remove(G.nodeArray[action[3]]);
@@ -400,7 +400,7 @@ private void removeDominating(){
                     node.neighbours = newArray;
                     node.neighbourPositions = newPositionArray;
                     node.triangleCounts = newTriangleArray;
-                    mergedNodes.pop();
+                    if (hk != null) mergedNodes.pop();
                     for (int i = 0; i < action[4]; i++) node.triangles.removeLast();
                     while (true){
                         int n = triangleAdditions.pop();
