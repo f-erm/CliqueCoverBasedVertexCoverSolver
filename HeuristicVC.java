@@ -212,6 +212,7 @@ public class HeuristicVC {
             boolean ok = false;
             for (int v : n.neighbours) if (!inVC[v]){//check whether there are free vertices in the initial solution
                 ok = true; //...and remove them from the solution
+                inVC[n.id] = false;
                 break;
             }
             if (!ok) continue;
@@ -317,9 +318,6 @@ public class HeuristicVC {
         return preCandidates;
     }
     private void removeFromVC(Node u, boolean permanent){ //remove a free vertex from the VC (must be free!)
-        if (posInLsPermutation[u.id] < vcBorder){
-            System.out.println(u.id + " - " + posInLsPermutation[u.id]);
-        }
         u.active = false;
         lsPermutation[posInLsPermutation[u.id]] = lsPermutation[--freeBorder];
         posInLsPermutation[lsPermutation[freeBorder].id] = posInLsPermutation[u.id];
