@@ -1,4 +1,6 @@
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Stack;
 
 public class Preprossessing {
@@ -10,8 +12,18 @@ public class Preprossessing {
      */
 
     public static LinkedList<Node> doAllThePrep(Graph G){
-        LinkedList<OldNode> oldSolution = removeDegreeOne(G);
+        LinkedList<OldNode> oldSolution = removeDegreeOneBetter(G);
+        //G.checkTotalEdgesOldGraph();
         removeDegreeZero(G);
+
+        Iterator<OldNode> it = G.oldNodeList.iterator();
+        while (it.hasNext()) {
+            OldNode node = it.next();
+            if (!node.active) {
+                it.remove();
+            }
+        }
+
         int i = 0;
         LinkedList <Node> goodSolution = new LinkedList<>();
         for (OldNode oldNode : oldSolution){
@@ -35,38 +47,56 @@ public class Preprossessing {
             changed = false;
             for (OldNode oldNode : G.oldNodeList) {
                 if(oldNode.neighbors.size()==1){
-                    solution.add(oldNode.neighbors.get(0));
-                    toRemove.add(oldNode.neighbors.get(0));
+                    solution.add(oldNode.neighbors.getFirst());
+                    toRemove.add(oldNode.neighbors.getFirst());
                     toRemove.add(oldNode);
                     changed = true;
                     break;
                 }
-                /*if (oldNode.neighbors.size() == 2){
-                    OldNode first = oldNode.neighbors.getFirst();
-                    OldNode second = oldNode.neighbors.get(1);
-                    mergedNodes.push(new OldNode[]{first, second, oldNode});
-                    if (!first.neighbors.contains(second)){ // case v,w \not \in E
-                        solution.add(oldNode);
-                        G.removeNode(oldNode);
-                        G.removeNode(second);
-                        for (OldNode neighbour : second.neighbors){
-                            if (!first.neighbors.contains(neighbour)){
-                                first.neighbors.add(neighbour);
-                                neighbour.neighbors.add(first);
-                                G.totalEdges++;
-                            }
+            }
+        }
+        return solution;
+    }
+
+    public static LinkedList<OldNode> removeDegreeOneBetter(Graph G){
+        Stack<OldNode> notCheckedNodes = new Stack<>();
+        LinkedList<OldNode> solution = new LinkedList<>();
+        for (OldNode oldNode : G.oldNodeList) {
+            while (!notCheckedNodes.empty()){
+                OldNode w = notCheckedNodes.pop();
+                if(w.neighbors.size()==1){
+                    OldNode neighbour = w.neighbors.remove();
+                    G.totalEdges --;
+                    //G.checkTotalEdgesOldGraph();
+                    solution.add(neighbour);
+                    for (OldNode v: neighbour.neighbors) {
+                        if (v != w){
+                            notCheckedNodes.push(v);
+                            v.neighbors.remove(neighbour);
+                            G.totalEdges --;
                         }
                     }
-                    else{ // case v,w \in E
-                        solution.add(first);
-                        toRemove.add(first);
-                        solution.add(second);
-                        toRemove.add(second);
-                        toRemove.add(oldNode);
+                    neighbour.neighbors.clear();
+                    //G.checkTotalEdgesOldGraph();
+                }
+            }
+
+            if(oldNode.neighbors.size()==1){
+                OldNode neighbour = oldNode.neighbors.remove();
+                G.totalEdges --;
+                //G.checkTotalEdgesOldGraph();
+                solution.add(neighbour);
+                for (OldNode v: neighbour.neighbors) {
+                    if (v != oldNode){
+                        notCheckedNodes.push(v);
+                        G.totalEdges --;
+                        //if (G.checkTotalEdgesOldGraph()){
+                        //    a ++;
+                        //}
+                        v.neighbors.remove(neighbour);
                     }
-                    changed = true;
-                    break;
-                }*/
+                }
+                neighbour.neighbors.clear();
             }
         }
         return solution;
@@ -80,7 +110,13 @@ public class Preprossessing {
             }
         }
         for (OldNode node: toDelete) {
-            G.removeNode(node);
+            //G.removeNode(node);
+
+            //this is not well written but effective. we dont use active and inactive for the old nodes and we just
+            // want to ignore the deg 0 nodes so instead of deleting them we set them to inactive
+            // this only works because they dont appear in any neigbourhood list
+
+            node.active = false;
         }
     }
 }

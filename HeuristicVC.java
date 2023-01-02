@@ -1,18 +1,38 @@
 import java.util.LinkedList;
 
+
 public class HeuristicVC {
     Graph G;
     Reduction reduction;
     int counterOfInexactRed;
     int inexactRed;
     int exactRed;
+    LinkedList<Node>[] nodeDegree;
+    int maxDegree;
 
     public HeuristicVC(Graph G){
         this.G = G;
-        HopcroftKarp hk = new HopcroftKarp(G);
-        reduction = new Reduction(G, hk);
+        //HopcroftKarp hk = new HopcroftKarp(G);
+        reduction = new Reduction(G, null);
         inexactRed = 0;
         exactRed = 0;
+        nodeDegree = new LinkedList[G.activeNodes];
+        maxDegree = 0;
+
+        for (int i = 0; i < G.activeNodes; i++) {
+            nodeDegree[i] = new LinkedList<Node>();
+        }
+
+
+        for (int id = 0; id < G.nodeArray.length; id++) {
+            Node node = G.nodeArray[id];
+            if (node.active){
+                nodeDegree[node.activeNeighbours].add(node);
+                if (maxDegree < node.activeNeighbours){
+                    maxDegree = node.activeNeighbours;
+                }
+            }
+        }
     }
 
     /**
@@ -21,45 +41,39 @@ public class HeuristicVC {
      * @return
      */
 
-    public LinkedList<Node> vc(boolean highestDegree){
+    public LinkedList<Node> vc(boolean highestDegree, boolean coolDataStruc, boolean fastDataStruc){
         LinkedList<Node>vc = new LinkedList<>();
         int sizeOfOldVC = reduction.VCNodes.size();
         counterOfInexactRed = 0;
-
+        int firstActiveNode = 0;
         //initial reduction
-        reduction.rollOutAll(Integer.MAX_VALUE,true);
+        //reduction.rollOutAll(Integer.MAX_VALUE,true);
 
-        
-        while (G.totalEdges > 0){
+        while (G.totalEdges > 0) {
 
             //check if an exact reduction can be applied
-            boolean changed = true;
-            while (changed && counterOfInexactRed < 100){
-                reduction.rollOutAll(Integer.MAX_VALUE, false);
-                if (reduction.VCNodes.size() == sizeOfOldVC) {
-                    changed = false;
-                }
-                else {
-                    exactRed ++;
-                    counterOfInexactRed = 0;
-                }
-                sizeOfOldVC = reduction.VCNodes.size();
+
+            /*int l = reduction.rollOutAll(Integer.MAX_VALUE, false);
+            if (l > 0) {
+                exactRed = exactRed + l;
+                //counterOfInexactRed = 0;
             }
-            if (G.totalEdges == 0){
+            sizeOfOldVC = reduction.VCNodes.size();
+            if (G.totalEdges == 0) {
                 vc.addAll(reduction.VCNodes);
-                while (!reduction.mergedNodes.isEmpty()){
+                while (!reduction.mergedNodes.isEmpty()) {
                     int[] merge = reduction.mergedNodes.pop();
-                    if (vc.contains(G.nodeArray[merge[0]])){
+                    if (vc.contains(G.nodeArray[merge[0]])) {
                         vc.add(G.nodeArray[merge[1]]);
                         vc.remove(G.nodeArray[merge[2]]);
                     }
                 }
                 vc.addAll(G.partialSolution);
                 return vc;
-            }
+            }*/
 
             //else use an inexact reduction;
-            if (highestDegree){
+            if (highestDegree && !coolDataStruc && !fastDataStruc){
                 int maxDegree = 0;
                 Node maxDegreeNode = null;
                 for (int id = 0; id < G.nodeArray.length; id++) {
@@ -74,30 +88,66 @@ public class HeuristicVC {
                 counterOfInexactRed ++;
                 inexactRed ++;
             }
+            if (highestDegree && coolDataStruc && !fastDataStruc) {
+                Node node = null;
+                boolean highestDegNodeFound = false;
+                while (!highestDegNodeFound) {
+                    while (nodeDegree[maxDegree].isEmpty()) {
+                        if (maxDegree > 0){
+                            maxDegree--;
+                        }
+                        else maxDegree = G.activeNodes;
+                    }
+                    node = nodeDegree[maxDegree].pop();
+                    if (!node.active){
+                        continue;
+                    }
+                    if (node.activeNeighbours >= maxDegree) {
+                        highestDegNodeFound = true;
+                    } else if (node.activeNeighbours >= 0 && node.activeNeighbours < maxDegree){
+                        nodeDegree[node.activeNeighbours].add(node);
+                    } else {
+                        nodeDegree[0].add(node);
+                    }
+                }
+                vc.add(node);
+                G.removeNode(node);
+                counterOfInexactRed++;
+                inexactRed++;
+            }
+            if (highestDegree && !coolDataStruc && fastDataStruc){
+                while (!G.nodeArray[firstActiveNode].active){
+                    firstActiveNode++;
+                }
+                Node node = G.nodeArray[firstActiveNode];
+                vc.add(node);
+                G.removeNode(node);
+                counterOfInexactRed++;
+                inexactRed++;
+            }
             else {
                 int minDegree = Integer.MAX_VALUE;
                 Node minDegreeNode = null;
                 for (int id = 0; id < G.nodeArray.length; id++) {
                     Node node = G.nodeArray[id];
-                    if (node.active && node.activeNeighbours < minDegree){
+                    if (node.active && node.activeNeighbours < minDegree) {
                         minDegreeNode = node;
                         minDegree = node.activeNeighbours;
                     }
                 }
-                if(minDegreeNode != null){
-                    for (int neighbourID: minDegreeNode.neighbours) {
+                if (minDegreeNode != null) {
+                    for (int neighbourID : minDegreeNode.neighbours) {
                         Node u = G.nodeArray[neighbourID];
-                        if(u.active){
+                        if (u.active) {
                             vc.add(u);
                             G.removeNode(u);
                         }
                     }
                     G.removeNode(minDegreeNode);
-                    counterOfInexactRed ++;
-                    inexactRed ++;
+                    counterOfInexactRed++;
+                    inexactRed++;
                 }
             }
-
         }
         vc.addAll(reduction.VCNodes);
         while (!reduction.mergedNodes.isEmpty()){
@@ -110,5 +160,6 @@ public class HeuristicVC {
         vc.addAll(G.partialSolution);
         return vc;
     }
+
 
 }

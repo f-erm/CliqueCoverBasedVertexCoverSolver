@@ -44,6 +44,9 @@ public class Graph implements Cloneable{
         n.active = false;
         for (int i = 0; i < n.neighbours.length; i++){
             nodeArray[n.neighbours[i]].activeNeighbours--;
+            if (nodeArray[n.neighbours[i]].activeNeighbours < 0){
+                throw new RuntimeException("a node has less than 0 active neighbours");
+            }
             if (n.triangleCounts[i] > 0) nodeArray[n.neighbours[i]].triangleCounts[n.neighbourPositions[i]] = 0;
         }
         totalEdges = totalEdges - n.activeNeighbours;
@@ -117,6 +120,56 @@ private int findInArray(int[] array, int el){
     }
     public void setPartialSolution(LinkedList<Node> partialSolution){
         this.partialSolution = partialSolution;
+    }
+
+    public void checkTotalEdgesNewGraph(){
+        int edgecount = 0;
+        for (Node node: nodeArray) {
+            for (int neighbourID: node.neighbours) {
+                Node neighbour = nodeArray[neighbourID];
+                if (neighbour.active){
+                    edgecount ++;
+                }
+            }
+        }
+        edgecount = edgecount/2;
+        if (edgecount != totalEdges){
+            throw new RuntimeException("the total edges are wrong");
+        }
+    }
+
+    public boolean checkTotalEdgesOldGraphBool(){
+        int edgecount = 0;
+        for (OldNode node: oldNodeList) {
+            for (OldNode neighbour: node.neighbors) {
+                edgecount ++;
+            }
+        }
+        edgecount = edgecount/2;
+        if (edgecount > totalEdges){
+            //throw new RuntimeException("the total edges not enough");
+            return true;
+        }
+        if (edgecount < totalEdges){
+            //throw new RuntimeException("the total edges are too many");
+            return true;
+        }
+        return false;
+    }
+    public void checkTotalEdgesOldGraph(){
+        int edgecount = 0;
+        for (OldNode node: oldNodeList) {
+            for (OldNode neighbour: node.neighbors) {
+                edgecount ++;
+            }
+        }
+        edgecount = edgecount/2;
+        if (edgecount > totalEdges){
+            throw new RuntimeException("the total edges not enough");
+        }
+        if (edgecount < totalEdges){
+            throw new RuntimeException("the total edges are too many");
+        }
     }
 
 
