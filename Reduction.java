@@ -68,6 +68,18 @@ public class Reduction {
         return VCNodes.size() - oldK;
     }
 
+    public int rollOutAllHeuristic(boolean doReduction, HeuristicVC hvc){
+        int oldK = VCNodes.size();
+        removeDegreeXHeuristic(hvc);
+        removeDominatingHeuristic(hvc);
+        if (doReduction) removeTwin();
+        if (doReduction) applyUnconfined();
+        if (doReduction) improvedLP(G);
+        removeDegreeXHeuristic(hvc);
+        removeDominatingHeuristic(hvc);
+        return VCNodes.size() - oldK;
+    }
+
     public boolean removeTwin() {
         LinkedList<LinkedList<Integer>> neighbourLists = new LinkedList<>();
         LinkedList<Integer> deg3nodes = new LinkedList<>();
@@ -249,28 +261,97 @@ public class Reduction {
         }
     }
 }
+    private void removeDegreeXHeuristic(HeuristicVC hvc) {
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (Node node : G.nodeArray) {
+                if (!node.active) continue;
+                if (node.activeNeighbours == 1) {
+                    deg1cuts++;
+                    int i = 0;
+                    while (!G.nodeArray[node.neighbours[i]].active) {
+                        i++;
+                    }
+                    Node neighbour = G.nodeArray[node.neighbours[i]];
+                    removeVCNodes(neighbour);
+                    hvc.reduceDegree(neighbour);
+                    removeUselessNodes(node);
+                    hvc.reduceDegree(node);
+                    changed = true;
+                    break;
+                }
+                if (node.activeNeighbours == 2) {
+                    deg2cuts++;
+                    long time = System.nanoTime();
+                    Node first = null, second = null;
+                    int it = 0;
+                    while (first == null) {
+                        Node current = G.nodeArray[node.neighbours[it++]];
+                        if (current.active) first = current;
+                    }
+                    while (second == null) {
+                        Node current = G.nodeArray[node.neighbours[it++]];
+                        if (current.active) second = current;
+                    }
+                    if (!arrayContains(first.neighbours, second.id)) {
+                        int oldNumNeighbours = first.neighbours.length;
+                        removeVCNodes(node);
+                        removeUselessNodes(second);
+                        mergeNodes(first, second); // case v,w \not \in E
+                        hvc.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
+                        mergedNodes.push(new int[]{first.id, second.id, node.id});
+                    } else { // case v,w \in E
+                        removeUselessNodes(node);
+                        hvc.reduceDegree(node);
+                        removeVCNodes(first);
+                        hvc.reduceDegree(first);
+                        removeVCNodes(second);
+                        hvc.reduceDegree(second);
+                    }
+                    deg2Time += System.nanoTime() - time;
+                    changed = true;
+                    break;
+                }
+                if (node.activeNeighbours == 0) {
+                    deg0cuts++;
+                    removeUselessNodes(node);
+                    hvc.reduceDegree(node);
+                    changed = true;
+                    break;
+                }
+            }
+        }
+    }
 
     /**
      * Goes through the dynamic dominatingNodes list and adds the dominating nodes to the vertex cover.
-     * TODO: check if dominated dominating vertices should be added to the VC
      */
 private void removeDominating(){
     long time = System.nanoTime();
     while (!G.dominatingNodes.isEmpty()){
         Node dominating = G.nodeArray[G.dominatingNodes.poll()];
         Node dominated = G.nodeArray[G.dominatingNodes.poll()];
-        if (dominating.active && dominated.active /*&& !dominating.dominated*/ && dominated.triangleCounts[findInArray(dominated.neighbours, dominating.id)] + 1 == dominated.activeNeighbours){
+        if (dominating.active && dominated.active && dominated.triangleCounts[findInArray(dominated.neighbours, dominating.id)] + 1 == dominated.activeNeighbours){
             removeVCNodes(dominating);
             domcuts++;
-            for (int n : dominated.neighbours){
-                if (G.nodeArray[n].active && !arrayContains(dominating.neighbours, n)){
-                    int aa = 0;
-                }
-            }
         }
     }
     domtime += System.nanoTime() - time;
 }
+    private void removeDominatingHeuristic(HeuristicVC hvc){
+        long time = System.nanoTime();
+        while (!G.dominatingNodes.isEmpty()){
+            Node dominating = G.nodeArray[G.dominatingNodes.poll()];
+            Node dominated = G.nodeArray[G.dominatingNodes.poll()];
+            if (dominating.active && dominated.active && dominated.triangleCounts[findInArray(dominated.neighbours, dominating.id)] + 1 == dominated.activeNeighbours){
+                removeVCNodes(dominating);
+                hvc.reduceDegree(dominating);
+                domcuts++;
+            }
+        }
+        domtime += System.nanoTime() - time;
+    }
     private int findInArray(int[] array, int el){
         for (int i = 0; i < array.length; i++) if (array[i] == el) return i;
         return -1;
@@ -285,14 +366,14 @@ private void removeDominating(){
                     G.reeaddNode(node);
                     LinkedList<Node> a = new LinkedList<>();
                     a.add(node);
-                    hk.updateAddNodes(a);
+                    if (hk != null) hk.updateAddNodes(a);
                     break;
                 case 2: //useful Nodes
                     G.reeaddNode(node);
                     VCNodes.remove(node);
                     LinkedList<Node> b = new LinkedList<>();
                     b.add(node);
-                    hk.updateAddNodes(b);
+                    if (hk != null) hk.updateAddNodes(b);
                     break;
                 case 3: //merged Nodes :(
                     //VCNodes.remove(G.nodeArray[action[3]]);
@@ -319,7 +400,7 @@ private void removeDominating(){
                     node.neighbours = newArray;
                     node.neighbourPositions = newPositionArray;
                     node.triangleCounts = newTriangleArray;
-                    mergedNodes.pop();
+                    if (hk != null) mergedNodes.pop();
                     for (int i = 0; i < action[4]; i++) node.triangles.removeLast();
                     while (true){
                         int n = triangleAdditions.pop();
