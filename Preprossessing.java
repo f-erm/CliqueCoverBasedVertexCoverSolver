@@ -16,6 +16,8 @@ public class Preprossessing {
         //G.checkTotalEdgesOldGraph();
         removeDegreeZero(G);
 
+
+        //removes deg 0 and deg 1 nodes
         Iterator<OldNode> it = G.oldNodeList.iterator();
         while (it.hasNext()) {
             OldNode node = it.next();
