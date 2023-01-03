@@ -4,6 +4,9 @@ import java.util.concurrent.ThreadLocalRandom;
 public class HeuristicVC {
     Graph G;
     Reduction reduction;
+    Queue<Integer> reduceDegZeroQueue;
+    Queue<Integer> reduceDegOneQueue;
+    Queue<Integer> reduceDegTwoQueue;
     int counterOfInexactRed;
     int inexactRed;
     int exactRed;
@@ -18,8 +21,9 @@ public class HeuristicVC {
     int vcBorder;
     int freeBorder;
     long startTime;
-    Vector<Integer> candidates;
-    public HeuristicVC(Graph G, long startTime){
+    boolean doDominating;
+    Queue<Integer> candidates;
+    public HeuristicVC(Graph G, long startTime, boolean doDominating){
         this.G = G;
         neighbourArrays = new int[G.nodeArray.length][];
         for (int i = 0; i < G.nodeArray.length; i++){
@@ -29,7 +33,11 @@ public class HeuristicVC {
         reduction = new Reduction(G, null);
         inexactRed = 0;
         exactRed = 0;
+        reduceDegZeroQueue = new LinkedList<>();
+        reduceDegOneQueue = new LinkedList<>();
+        reduceDegTwoQueue = new LinkedList<>();
         this.startTime = startTime;
+        this.doDominating = doDominating;
     }
 
     /**
@@ -43,7 +51,7 @@ public class HeuristicVC {
         int sizeOfOldVC = reduction.VCNodes.size();
         counterOfInexactRed = 0;
         //initial reduction
-        /*if ((System.nanoTime() - startTime)/1024  < 20000000)*/ reduction.rollOutAll(Integer.MAX_VALUE,false);
+        reduction.rollOutAllInitial(false, doDominating);
         permutation = new Node[G.activeNodes];//keeps the nodes sorted
         posInPermutation = new int[G.nodeArray.length]; //stores the position of a node in permutation
         int j = 0;
@@ -76,18 +84,22 @@ public class HeuristicVC {
         while (G.totalEdges > 0){
             iterativeSteps++;
             //check if an exact reduction can be applied
-            /*if ((System.nanoTime() - startTime)/1024  < 30000000)*/ reduction.rollOutAllHeuristic(false, this);
+            if ((System.nanoTime() - startTime)/1024  < 30000000) reduction.rollOutAllHeuristic(false, this, doDominating);
             if (G.totalEdges == 0){
                 vc.addAll(reduction.VCNodes);
+                boolean[] inVC = new boolean[G.nodeArray.length];
+                for (Node n : vc) inVC[n.id] = true;
                 while (!reduction.mergedNodes.isEmpty()){
                     int[] merge = reduction.mergedNodes.pop();
-                    if (vc.contains(G.nodeArray[merge[0]])){
-                        vc.add(G.nodeArray[merge[1]]);
-                        vc.remove(G.nodeArray[merge[2]]);
+                    if (inVC[merge[0]]){
+                        inVC[merge[1]] = true;
+                        inVC[merge[2]] = false;
                     }
                 }
+                vc.clear();
+                for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
                 int cnt = 0;
-                while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 100) {
+                while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 3) {
                     LinkedList<Node> newVC = metaheuristic(vc);
                     if (newVC.size() < vc.size()) {
                         vc = newVC;
@@ -135,16 +147,19 @@ public class HeuristicVC {
 
         }
         vc.addAll(reduction.VCNodes);
+        boolean[] inVC = new boolean[G.nodeArray.length];
+        for (Node n : vc) inVC[n.id] = true;
         while (!reduction.mergedNodes.isEmpty()){
             int[] merge = reduction.mergedNodes.pop();
-            if (vc.contains(G.nodeArray[merge[0]])){
-                vc.add(G.nodeArray[merge[1]]);
-                vc.remove(G.nodeArray[merge[2]]);
+            if (inVC[merge[0]]){
+                inVC[merge[1]] = true;
+                inVC[merge[2]] = false;
             }
         }
+        vc.clear();
+        for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
         int cnt = 0;
-        while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 1000) {
-            System.out.println(cnt);
+        while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 3) {
             LinkedList<Node> newVC = metaheuristic(vc);
             if (newVC.size() < vc.size()) {
                 vc = newVC;
@@ -162,6 +177,10 @@ public class HeuristicVC {
         }
     }
     private void reduceSingleDegree(int n){
+        Node u = G.nodeArray[n];
+        if (u.activeNeighbours == 0) reduceDegZeroQueue.offer(u.id);
+        if (u.activeNeighbours == 1) reduceDegOneQueue.offer(u.id);
+        if (u.activeNeighbours == 2) reduceDegTwoQueue.offer(u.id);
         int oldDegree = G.nodeArray[n].activeNeighbours + 1;
         permutation[posInPermutation[n]] = permutation[borderIndices[oldDegree]];
         posInPermutation[permutation[borderIndices[oldDegree]].id] = posInPermutation[n];
@@ -201,7 +220,7 @@ public class HeuristicVC {
             n.active = false;
             n.activeNeighbours = 0;
         }
-        candidates = new Vector<>();//allows fast random accessing & deleting
+        candidates = new LinkedList<>();//allows fast random accessing & deleting
         isCandidate = new boolean[G.nodeArray.length];
         lsPermutation = new Node[G.nodeArray.length];//array consists of three blocks: 1)non-free VC nodes 2)free VC nodes 3)not-VC-nodes (free means they can be removed from the VC)
         posInLsPermutation = new int[G.nodeArray.length];
@@ -212,10 +231,12 @@ public class HeuristicVC {
             boolean ok = false;
             for (int v : n.neighbours) if (!inVC[v]){//check whether there are free vertices in the initial solution
                 ok = true; //...and remove them from the solution
-                inVC[n.id] = false;
                 break;
             }
-            if (!ok) continue;
+            if (!ok) {
+                inVC[n.id] = false;
+                continue;
+            }
             lsPermutation[j] = n;
             posInLsPermutation[n.id] = j++;
             G.nodeArray[n.id].active = true;
@@ -223,6 +244,11 @@ public class HeuristicVC {
                 G.nodeArray[neighbour].activeNeighbours++;
             }
         }
+        /*for (int i = 0; i < G.nodeArray.length; i++){
+            int count = 0;
+            for (int n : G.nodeArray[i].neighbours) if (G.nodeArray[n].active) count++;
+            if (count != G.nodeArray[i].activeNeighbours) System.out.println("hey");
+        }*/
         vcBorder = j;
         freeBorder = j;
         for (int i = 0; i < G.nodeArray.length; i++){
@@ -245,47 +271,12 @@ public class HeuristicVC {
         int oldBorder = -1;
         while(oldBorder != vcBorder) {//actual local search begins here
             oldBorder = vcBorder;
-            twoImprovements();//look for 2-improvements
-            for (Node u : lsPermutation) {//look for 3-improvements
-                if (u.activeNeighbours == u.neighbours.length - 2) {
-                    Node x = null, y = null;
-                    for (j = 0; j < u.neighbours.length; j++)
-                        if (!G.nodeArray[u.neighbours[j]].active) {
-                            x = G.nodeArray[u.neighbours[j]];
-                            break;
-                        }
-                    for (j = j + 1; j < u.neighbours.length; j++)
-                        if (!G.nodeArray[u.neighbours[j]].active) {
-                            y = G.nodeArray[u.neighbours[j]];
-                            break;
-                        }
-                    addToVC(x);
-                    addToVC(y);
-                    removeFromVC(u, false);
-                    if (freeBorder - vcBorder < 2) {
-                        addToVC(u);
-                        removeFromVC(y, false);
-                        removeFromVC(x, false);
-                    } else {
-                        boolean success = false;
-                        for (int i = vcBorder; i < freeBorder; i++) {
-                            Node v = lsPermutation[i];
-                            removeFromVC(v, false);
-                            if (freeBorder == vcBorder) addToVC(v);
-                            else {
-                                while (freeBorder != vcBorder) removeFromVC(lsPermutation[vcBorder], false);
-                                success = true;
-                                break;
-                            }
-                        }
-                        if (!success) {
-                            addToVC(u);
-                            removeFromVC(y, false);
-                            removeFromVC(x, false);
-                        }
-                    }
-                }
-            }
+            twoImprovements();
+            if ((System.nanoTime() - startTime)/1024 > 55500000) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
+            threeImprovements();
+            if ((System.nanoTime() - startTime)/1024 > 55500000) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
+            fourImprovements();
+            if ((System.nanoTime() - startTime)/1024 > 55500000) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
         }
         return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
     }
@@ -336,23 +327,24 @@ public class HeuristicVC {
     }
     private void addToCandidates(int n){
         if (!isCandidate[n]){
-            candidates.add(n);
+            candidates.offer(n);
             isCandidate[n] = true;
         }
     }
     private int pollRandomCandidate(){
-        int rand = ThreadLocalRandom.current().nextInt(0, candidates.size());
+        /*int rand = ThreadLocalRandom.current().nextInt(0, candidates.size());
         int a = candidates.get(rand);
         candidates.set(rand, candidates.lastElement());
-        candidates.setSize(candidates.size() - 1);
-        return a;
+        candidates.setSize(candidates.size() - 1);*/
+        return candidates.poll();
     }
     private LinkedList<Node> metaheuristic(LinkedList<Node> vc){//main function
         int steps = 0;
         LinkedList<Node> bestSolution = localSearch(vc);
         int bestSolutionSize = vcBorder;
         int lastTimeGotWorse = 0;
-        while ((System.nanoTime() - startTime)/1024 < 55000000 && steps < 10000){
+        int notImprovedFor = 0;
+        while ((System.nanoTime() - startTime)/1024 < 55000000 && notImprovedFor < 1000000){
             if (vcBorder == 0) return vc;//perturb the solution
             int rand = ThreadLocalRandom.current().nextInt(0, vcBorder);
             Node u = lsPermutation[rand];
@@ -391,6 +383,7 @@ public class HeuristicVC {
                 bestSolution = new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
                 bestSolutionSize = vcBorder;
             }
+            else notImprovedFor++;
             steps++;
         }
         return bestSolution;
@@ -420,7 +413,6 @@ public class HeuristicVC {
                     addOrDelete.push(true);
                     actions.push(lsPermutation[vcBorder].id);
                     addToVC(lsPermutation[vcBorder]);
-                    int pos2 = posInLsPermutation[toAdd.id];
                     addOrDelete.push(false);
                     actions.push(toAdd.id);
                     removeFromVC(toAdd, false);
@@ -442,5 +434,128 @@ public class HeuristicVC {
         a[0] = actions;
         a[1] = addOrDelete;
         return a;
+    }
+    private void threeImprovements(){
+        LinkedList<Integer> candidatesToAdd = new LinkedList<>();
+        for (Node u : lsPermutation) {//look for 3-improvements
+            if (u.activeNeighbours == u.neighbours.length - 2) {
+                LinkedList<Integer> preCandidates = new LinkedList<>();
+                Node x = null, y = null;
+                int j;
+                for (j = 0; j < u.neighbours.length; j++)
+                    if (!G.nodeArray[u.neighbours[j]].active) {
+                        x = G.nodeArray[u.neighbours[j]];
+                        break;
+                    }
+                for (j = j + 1; j < u.neighbours.length; j++)
+                    if (!G.nodeArray[u.neighbours[j]].active) {
+                        y = G.nodeArray[u.neighbours[j]];
+                        break;
+                    }
+                preCandidates.addAll(addToVC(x));
+                preCandidates.addAll(addToVC(y));
+                removeFromVC(u, false);
+                preCandidates.add(u.id);
+                if (freeBorder - vcBorder < 2) {
+                    addToVC(u);
+                    removeFromVC(y, false);
+                    removeFromVC(x, false);
+                } else {
+                    boolean success = false;
+                    for (int i = vcBorder; i < freeBorder; i++) {
+                        Node v = lsPermutation[i];
+                        removeFromVC(v, false);
+                        if (freeBorder == vcBorder) addToVC(v);
+                        else {
+                            preCandidates.add(v.id);
+                            while (freeBorder != vcBorder) {
+                                preCandidates.add(lsPermutation[vcBorder].id);
+                                removeFromVC(lsPermutation[vcBorder], false);
+                            }
+                            success = true;
+                            candidatesToAdd.addAll(preCandidates);
+                            break;
+                        }
+                    }
+                    if (!success) {
+                        addToVC(u);
+                        removeFromVC(y, false);
+                        removeFromVC(x, false);
+                    }
+                }
+            }
+        }
+        for (int el : candidatesToAdd) addToCandidates(el);
+    }
+    private void fourImprovements(){
+        LinkedList<Integer> candidatesToAdd = new LinkedList<>();
+        for (Node u : lsPermutation) {//look for 4-improvements
+            if ((System.nanoTime() - startTime)/1024 > 55500000) return;
+            if (u.activeNeighbours == u.neighbours.length - 3) {
+                LinkedList<Integer> preCandidates = new LinkedList<>();
+                Node x = null, y = null, z = null;
+                int j;
+                for (j = 0; j < u.neighbours.length; j++)
+                    if (!G.nodeArray[u.neighbours[j]].active) {
+                        x = G.nodeArray[u.neighbours[j]];
+                        break;
+                    }
+                for (j = j + 1; j < u.neighbours.length; j++)
+                    if (!G.nodeArray[u.neighbours[j]].active) {
+                        y = G.nodeArray[u.neighbours[j]];
+                        break;
+                    }
+                for (j = j + 1; j < u.neighbours.length; j++)
+                    if (!G.nodeArray[u.neighbours[j]].active) {
+                        z = G.nodeArray[u.neighbours[j]];
+                        break;
+                    }
+                preCandidates.addAll(addToVC(x));
+                preCandidates.addAll(addToVC(y));
+                preCandidates.addAll(addToVC(z));
+                removeFromVC(u, false);
+                preCandidates.add(u.id);
+                if (freeBorder - vcBorder < 3) {
+                    addToVC(u);
+                    removeFromVC(z, false);
+                    removeFromVC(y, false);
+                    removeFromVC(x, false);
+                } else {
+                    boolean success = false;
+                    for (int i = vcBorder; i < freeBorder; i++) {
+                        Node v = lsPermutation[i];
+                        removeFromVC(v, false);
+                        if (freeBorder - vcBorder < 2) addToVC(v);
+                        else {
+                            for (j = vcBorder; j < freeBorder; j++){
+                                Node w = lsPermutation[j];
+                                removeFromVC(w, false);
+                                if (freeBorder == vcBorder) addToVC(w);
+                                else{
+                                    preCandidates.add(v.id);
+                                    preCandidates.add(w.id);
+                                    while (freeBorder != vcBorder) {
+                                        preCandidates.add(lsPermutation[vcBorder].id);
+                                        removeFromVC(lsPermutation[vcBorder], false);
+                                    }
+                                    success = true;
+                                    candidatesToAdd.addAll(preCandidates);
+                                    break;
+                                }
+                            }
+                            if (success) break;
+                            else addToVC(v);
+                        }
+                    }
+                    if (!success) {
+                        addToVC(u);
+                        removeFromVC(z, false);
+                        removeFromVC(y, false);
+                        removeFromVC(x, false);
+                    }
+                }
+            }
+        }
+        for (int el : candidatesToAdd) addToCandidates(el);
     }
 }

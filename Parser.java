@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.*;
 
 public class Parser {
-
+    static boolean doDominating = true;
     public static Graph parseGraph(String pathname){
         //Create Graph as Hashmap of OldNodes
         Graph g = new Graph();
@@ -43,6 +43,7 @@ public class Parser {
     private static Graph createGraph(Graph g){
         //Convert Hashmap into sorted list and apply REDUKTIONSREGELN.
         //This detour is mainly to allow sorting of the graph. Sorting after we have converted into an array is impossible, as we reference nodes by their graph array index
+        long time = System.nanoTime();
         LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
         Collections.sort(ll);
         g.oldNodeList = ll;
@@ -60,7 +61,18 @@ public class Parser {
             g.activeNodes++;
             g.nodeArray[i++] = n;
         }
+        for (Node n : g.nodeArray){
+            for (i = 0; i < n.neighbours.length; i++){
+                Node v = g.nodeArray[n.neighbours[i]];
+                if (v.id < n.id) v.neighbourPositions[n.neighbourPositions[i]] = i;
+                else v.neighbourPositions[arrayContains(v.neighbours, n.id)] = i;
+            }
+        }
         for (Node n : g.nodeArray){ // find initial triangles in the graph
+            if ((System.nanoTime() - time)/1024 > 20000000){
+                doDominating = false;
+                break;
+            }
             int cu = 0;
             for (int u : n.neighbours){
                 if (n.id > u){

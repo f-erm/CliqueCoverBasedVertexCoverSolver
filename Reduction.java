@@ -68,15 +68,26 @@ public class Reduction {
         return VCNodes.size() - oldK;
     }
 
-    public int rollOutAllHeuristic(boolean doReduction, HeuristicVC hvc){
+    public int rollOutAllHeuristic(boolean doReduction, HeuristicVC hvc, boolean doDominating){
         int oldK = VCNodes.size();
         removeDegreeXHeuristic(hvc);
-        removeDominatingHeuristic(hvc);
+        if (doDominating) removeDominatingHeuristic(hvc);
         if (doReduction) removeTwin();
         if (doReduction) applyUnconfined();
         if (doReduction) improvedLP(G);
         removeDegreeXHeuristic(hvc);
-        removeDominatingHeuristic(hvc);
+        if (doDominating) removeDominatingHeuristic(hvc);
+        return VCNodes.size() - oldK;
+    }
+    public int rollOutAllInitial(boolean doReduction, boolean doDominating){
+        int oldK = VCNodes.size();
+        removeDegreeXInitial();
+        if (doDominating) removeDominating();
+        if (doReduction) removeTwin();
+        if (doReduction) applyUnconfined();
+        if (doReduction) improvedLP(G);
+        removeDegreeXInitial();
+        if (doDominating) removeDominating();
         return VCNodes.size() - oldK;
     }
 
@@ -261,7 +272,217 @@ public class Reduction {
         }
     }
 }
-    private void removeDegreeXHeuristic(HeuristicVC hvc) {
+    private void removeDegreeXInitial() {
+        Queue<Integer> deg0 = new LinkedList<>();
+        Queue<Integer> deg1 = new LinkedList<>();
+        Queue<Integer> deg2 = new LinkedList<>();
+        for (Node node : G.nodeArray) {
+            if (!node.active) continue;
+            if (node.activeNeighbours == 1) {
+                deg1cuts++;
+                int i = 0;
+                while (!G.nodeArray[node.neighbours[i]].active) {
+                    i++;
+                }
+                Node neighbour = G.nodeArray[node.neighbours[i]];
+                removeVCNodes(neighbour);
+                for (int n : neighbour.neighbours) {
+                    if (!G.nodeArray[n].active) continue;
+                    if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
+                    if (G.nodeArray[n].activeNeighbours == 1) deg1.offer(n);
+                    if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
+                }
+                removeUselessNodes(node);
+                continue;
+            }
+            if (node.activeNeighbours == 2) {
+                deg2cuts++;
+                long time = System.nanoTime();
+                Node first = null, second = null;
+                int it = 0;
+                while (first == null) {
+                    Node current = G.nodeArray[node.neighbours[it++]];
+                    if (current.active) first = current;
+                }
+                while (second == null) {
+                    Node current = G.nodeArray[node.neighbours[it++]];
+                    if (current.active) second = current;
+                }
+                if (!arrayContains(first.neighbours, second.id)) {
+                    removeVCNodes(node);
+                    removeUselessNodes(second);
+                    mergeNodes(first, second); // case v,w \not \in E
+                    for (int n : second.neighbours) {
+                        if (!G.nodeArray[n].active) continue;
+                        if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
+                        if (G.nodeArray[n].activeNeighbours == 1) deg1.offer(n);
+                        if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
+                    }
+                    if (G.nodeArray[first.id].activeNeighbours == 0) deg0.offer(first.id);
+                    if (G.nodeArray[first.id].activeNeighbours == 1) deg1.offer(first.id);
+                    if (G.nodeArray[first.id].activeNeighbours == 2) deg2.offer(first.id);
+                    mergedNodes.push(new int[]{first.id, second.id, node.id});
+                } else { // case v,w \in E
+                    removeUselessNodes(node);
+                    removeVCNodes(first);
+                    for (int n : first.neighbours) {
+                        if (!G.nodeArray[n].active) continue;
+                        if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
+                        if (G.nodeArray[n].activeNeighbours == 1) deg1.offer(n);
+                        if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
+                    }
+                    removeVCNodes(second);
+                    for (int n : second.neighbours) {
+                        if (!G.nodeArray[n].active) continue;
+                        if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
+                        if (G.nodeArray[n].activeNeighbours == 1) deg1.offer(n);
+                        if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
+                    }
+                }
+                deg2Time += System.nanoTime() - time;
+                continue;
+            }
+            if (node.activeNeighbours == 0) {
+                deg0cuts++;
+                removeUselessNodes(node);
+            }
+        }
+        while (!deg0.isEmpty() || !deg1.isEmpty() || !deg2.isEmpty()) {
+            while (!deg1.isEmpty()) {
+                Node node = G.nodeArray[deg1.poll()];
+                if (!node.active) continue;
+                if (node.activeNeighbours == 1) {
+                    deg1cuts++;
+                    int i = 0;
+                    while (!G.nodeArray[node.neighbours[i]].active) {
+                        i++;
+                    }
+                    Node neighbour = G.nodeArray[node.neighbours[i]];
+                    removeVCNodes(neighbour);
+                    for (int n : neighbour.neighbours) {
+                        if (!G.nodeArray[n].active) continue;
+                        if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
+                        if (G.nodeArray[n].activeNeighbours == 1) deg1.offer(n);
+                        if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
+                    }
+                    removeUselessNodes(node);
+                }
+            }
+            while (!deg2.isEmpty()){
+                Node node = G.nodeArray[deg2.poll()];
+                if (node.activeNeighbours == 2 && node.active) {
+                    deg2cuts++;
+                    Node first = null, second = null;
+                    int it = 0;
+                    while (first == null) {
+                        Node current = G.nodeArray[node.neighbours[it++]];
+                        if (current.active) first = current;
+                    }
+                    while (second == null) {
+                        Node current = G.nodeArray[node.neighbours[it++]];
+                        if (current.active) second = current;
+                    }
+                    if (!arrayContains(first.neighbours, second.id)) {
+                        removeVCNodes(node);
+                        removeUselessNodes(second);
+                        mergeNodes(first, second); // case v,w \not \in E
+                        for (int n : second.neighbours) {
+                            if (!G.nodeArray[n].active) continue;
+                            if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
+                            if (G.nodeArray[n].activeNeighbours == 1) deg1.offer(n);
+                            if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
+                        }
+                        if (G.nodeArray[first.id].activeNeighbours == 0) deg0.offer(first.id);
+                        if (G.nodeArray[first.id].activeNeighbours == 1) deg1.offer(first.id);
+                        if (G.nodeArray[first.id].activeNeighbours == 2) deg2.offer(first.id);
+                        mergedNodes.push(new int[]{first.id, second.id, node.id});
+                    } else { // case v,w \in E
+                        removeUselessNodes(node);
+                        removeVCNodes(first);
+                        for (int n : first.neighbours) {
+                            if (!G.nodeArray[n].active) continue;
+                            if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
+                            if (G.nodeArray[n].activeNeighbours == 1) deg1.offer(n);
+                            if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
+                        }
+                        removeVCNodes(second);
+                        for (int n : second.neighbours) {
+                            if (!G.nodeArray[n].active) continue;
+                            if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
+                            if (G.nodeArray[n].activeNeighbours == 1) deg1.offer(n);
+                            if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
+                        }
+                    }
+                }
+            }
+            while (!deg0.isEmpty()){
+                Node node = G.nodeArray[deg0.poll()];
+                if (node.activeNeighbours == 0 && node.active) {
+                    deg0cuts++;
+                    removeUselessNodes(node);
+                }
+            }
+        }
+    }
+private void removeDegreeXHeuristic(HeuristicVC hvc){
+        while (!hvc.reduceDegTwoQueue.isEmpty() || !hvc.reduceDegZeroQueue.isEmpty() || !hvc.reduceDegOneQueue.isEmpty()) {
+            while (!hvc.reduceDegOneQueue.isEmpty()) {
+                Node node = G.nodeArray[hvc.reduceDegOneQueue.poll()];
+                if (node.active && node.activeNeighbours == 1) {
+                    deg1cuts++;
+                    int i = 0;
+                    while (!G.nodeArray[node.neighbours[i]].active) {
+                        i++;
+                    }
+                    Node neighbour = G.nodeArray[node.neighbours[i]];
+                    removeVCNodes(neighbour);
+                    hvc.reduceDegree(neighbour);
+                    removeUselessNodes(node);
+                    hvc.reduceDegree(node);
+                }
+            }
+            while (!hvc.reduceDegTwoQueue.isEmpty()) {
+                Node node = G.nodeArray[hvc.reduceDegTwoQueue.poll()];
+                if (node.active && node.activeNeighbours == 2) {
+                    deg2cuts++;
+                    Node first = null, second = null;
+                    int it = 0;
+                    while (first == null) {
+                        Node current = G.nodeArray[node.neighbours[it++]];
+                        if (current.active) first = current;
+                    }
+                    while (second == null) {
+                        Node current = G.nodeArray[node.neighbours[it++]];
+                        if (current.active) second = current;
+                    }
+                    if (!arrayContains(first.neighbours, second.id)) {
+                        int oldNumNeighbours = first.neighbours.length;
+                        removeVCNodes(node);
+                        removeUselessNodes(second);
+                        mergeNodes(first, second); // case v,w \not \in E
+                        hvc.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
+                        mergedNodes.push(new int[]{first.id, second.id, node.id});
+                    } else { // case v,w \in E
+                        removeUselessNodes(node);
+                        hvc.reduceDegree(node);
+                        removeVCNodes(first);
+                        hvc.reduceDegree(first);
+                        removeVCNodes(second);
+                        hvc.reduceDegree(second);
+                    }
+                }
+            }
+            while (!hvc.reduceDegZeroQueue.isEmpty()) {
+                Node node = G.nodeArray[hvc.reduceDegZeroQueue.poll()];
+                if (node.active && node.activeNeighbours == 0) {
+                    deg0cuts++;
+                    removeUselessNodes(node);
+                    hvc.reduceDegree(node);
+                }
+            }
+        }
+}
+    private void removeDegreeXHeuristic(HeuristicVC hvc, int x) {
         boolean changed = true;
         while (changed) {
             changed = false;

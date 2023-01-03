@@ -28,8 +28,7 @@ public class Node implements Comparable<Node>, Cloneable{
         triangles = new LinkedList<>();
         int i = 0;
         for (OldNode n : oldNode.neighbors) {
-            neighbours[i] = n.id;
-            neighbourPositions[i++] = n.neighbors.indexOf(oldNode);
+            neighbours[i++] = n.id;
         }
     }
 
