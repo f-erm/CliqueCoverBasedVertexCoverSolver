@@ -99,7 +99,7 @@ public class HeuristicVC {
                 vc.clear();
                 for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
                 int cnt = 0;
-                while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 3) {
+                while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 30) {
                     LinkedList<Node> newVC = metaheuristic(vc);
                     if (newVC.size() < vc.size()) {
                         vc = newVC;
@@ -159,7 +159,7 @@ public class HeuristicVC {
         vc.clear();
         for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
         int cnt = 0;
-        while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 3) {
+        while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 30) {
             LinkedList<Node> newVC = metaheuristic(vc);
             if (newVC.size() < vc.size()) {
                 vc = newVC;
@@ -244,11 +244,6 @@ public class HeuristicVC {
                 G.nodeArray[neighbour].activeNeighbours++;
             }
         }
-        /*for (int i = 0; i < G.nodeArray.length; i++){
-            int count = 0;
-            for (int n : G.nodeArray[i].neighbours) if (G.nodeArray[n].active) count++;
-            if (count != G.nodeArray[i].activeNeighbours) System.out.println("hey");
-        }*/
         vcBorder = j;
         freeBorder = j;
         for (int i = 0; i < G.nodeArray.length; i++){
@@ -345,6 +340,7 @@ public class HeuristicVC {
         int lastTimeGotWorse = 0;
         int notImprovedFor = 0;
         while ((System.nanoTime() - startTime)/1024 < 55000000 && notImprovedFor < 1000000){
+            int lastBorder = vcBorder;
             if (vcBorder == 0) return vc;//perturb the solution
             int rand = ThreadLocalRandom.current().nextInt(0, vcBorder);
             Node u = lsPermutation[rand];
@@ -365,7 +361,8 @@ public class HeuristicVC {
                 removeFromVC(lsPermutation[vcBorder], true);
             }
             Stack[] actionStack = twoImprovements(); // improve solution
-            if (vcBorder > bestSolutionSize && steps - lastTimeGotWorse < bestSolutionSize){
+            if (vcBorder > lastBorder && (lastTimeGotWorse < bestSolutionSize || ThreadLocalRandom.current().nextDouble() > 1.0 / (1.0 + (lastBorder - vcBorder) * (bestSolutionSize - vcBorder)))){
+                lastTimeGotWorse++;
                 Stack<Integer> actions = actionStack[0];
                 Stack<Boolean> addOrDelete = actionStack[1];
                 while (!actions.isEmpty()){
@@ -378,7 +375,9 @@ public class HeuristicVC {
                 addToVC(u);
                 while (!addedNodes.isEmpty()) removeFromVC(addedNodes.pop(), false);
             }
-            else if (vcBorder > bestSolutionSize) lastTimeGotWorse = steps;
+            else if (vcBorder > lastBorder) lastTimeGotWorse = 0;
+            if (vcBorder < lastBorder) lastTimeGotWorse = 0;
+            else lastTimeGotWorse++;
             if (vcBorder < bestSolutionSize) {
                 bestSolution = new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
                 bestSolutionSize = vcBorder;

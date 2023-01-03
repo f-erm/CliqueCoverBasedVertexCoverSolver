@@ -68,45 +68,51 @@ public class Parser {
                 else v.neighbourPositions[arrayContains(v.neighbours, n.id)] = i;
             }
         }
-        for (Node n : g.nodeArray){ // find initial triangles in the graph
-            if ((System.nanoTime() - time)/1024 > 20000000){
-                doDominating = false;
-                break;
-            }
-            int cu = 0;
-            for (int u : n.neighbours){
-                if (n.id > u){
-                    cu++;
-                    continue;
+        try {
+            for (Node n : g.nodeArray) { // find initial triangles in the graph
+                if ((System.nanoTime() - time) / 1024 > 0) {
+                    doDominating = false;
+                    for (Node node : g.nodeArray) node.triangles.clear();
+                    break;
                 }
-                int cv = 0;
-                for (int v : g.nodeArray[u].neighbours){
-                    if (u > v){
-                        cv++;
+                int cu = 0;
+                for (int u : n.neighbours) {
+                    if (n.id > u) {
+                        cu++;
                         continue;
                     }
-                    int cont = arrayContains(n.neighbours, v);
-                    if (cont >= 0){
-                        n.triangleCounts[cu]++;
-                        n.triangles.add(cu);
-                        n.triangles.add(cont);
-                        n.triangles.add(cv);
-                        g.nodeArray[u].triangles.add(n.neighbourPositions[cu]);
-                        g.nodeArray[u].triangles.add(cv);
-                        g.nodeArray[u].triangles.add(cont);
-                        g.nodeArray[v].triangles.add(n.neighbourPositions[cont]);
-                        g.nodeArray[v].triangles.add(g.nodeArray[u].neighbourPositions[cv]);
-                        g.nodeArray[v].triangles.add(cu);
-                        g.nodeArray[u].triangleCounts[n.neighbourPositions[cu]]++;
-                        g.nodeArray[u].triangleCounts[cv]++;
-                        g.nodeArray[v].triangleCounts[g.nodeArray[u].neighbourPositions[cv]]++;
-                        n.triangleCounts[cont]++;
-                        g.nodeArray[v].triangleCounts[n.neighbourPositions[cont]]++;
+                    int cv = 0;
+                    for (int v : g.nodeArray[u].neighbours) {
+                        if (u >= v) {
+                            cv++;
+                            continue;
+                        }
+                        int cont = arrayContains(n.neighbours, v);
+                        if (cont >= 0) {
+                            n.triangleCounts[cu]++;
+                            n.triangles.add(cu);
+                            n.triangles.add(cont);
+                            n.triangles.add(cv);
+                            g.nodeArray[u].triangles.add(n.neighbourPositions[cu]);
+                            g.nodeArray[u].triangles.add(cv);
+                            g.nodeArray[u].triangles.add(cont);
+                            g.nodeArray[v].triangles.add(n.neighbourPositions[cont]);
+                            g.nodeArray[v].triangles.add(g.nodeArray[u].neighbourPositions[cv]);
+                            g.nodeArray[v].triangles.add(cu);
+                            g.nodeArray[u].triangleCounts[n.neighbourPositions[cu]]++;
+                            g.nodeArray[u].triangleCounts[cv]++;
+                            g.nodeArray[v].triangleCounts[g.nodeArray[u].neighbourPositions[cv]]++;
+                            n.triangleCounts[cont]++;
+                            g.nodeArray[v].triangleCounts[n.neighbourPositions[cont]]++;
+                        }
+                        cv++;
                     }
-                    cv++;
+                    cu++;
                 }
-                cu++;
             }
+        }catch (OutOfMemoryError e){
+            doDominating = false;
+            for (Node n : g.nodeArray) n.triangles.clear();
         }
         return g;
     }
