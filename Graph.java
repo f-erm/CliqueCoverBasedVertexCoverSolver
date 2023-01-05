@@ -18,6 +18,9 @@ public class Graph implements Cloneable{
         totalEdges = 0;
         dominatingNodes = new LinkedList<>();
     }
+    public Graph(boolean hi){
+
+    }
 
     /**
      * adds an edge when reading the input. Only used in the beginning on OldNodes.
@@ -175,13 +178,15 @@ private int findInArray(int[] array, int el){
 
     @Override
     public Object clone(){
-        Graph Gnew = new Graph();
+        Graph Gnew = new Graph(false);
         Gnew.nodeArray = new Node[this.nodeArray.length];
         for (int i=0;i< this.nodeArray.length; i++ ){
             Gnew.nodeArray[i] = (Node) this.nodeArray[i].clone();
         }
         Gnew.partialSolution = this.partialSolution; //this might be janky. partialsolution refers to the uncopied nodes.
         Gnew.totalEdges = this.totalEdges;
+        Gnew.activeNodes = this.activeNodes;
+        Gnew.dominatingNodes = new LinkedList<>(this.dominatingNodes);
         return Gnew;
     }
 }

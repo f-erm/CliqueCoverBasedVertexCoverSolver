@@ -28,9 +28,6 @@ public class Reduction {
     long twintime = 0;
     long cctime= 0;
     int cccuts = 0;
-    long merge1 = 0;
-    long merge2 = 0;
-    long merge3 = 0;
 
     public Reduction(Graph G, HopcroftKarp hk) {
         this.G = G;
@@ -68,15 +65,15 @@ public class Reduction {
         return VCNodes.size() - oldK;
     }
 
-    public int rollOutAllHeuristic(boolean doReduction, HeuristicVC hvc, boolean doDominating){
+    public int rollOutAllHeuristic(boolean doReduction, InitialSolution insol, boolean doDominating){
         int oldK = VCNodes.size();
-        removeDegreeXHeuristic(hvc, doDominating);
-        if (doDominating) removeDominatingHeuristic(hvc);
+        removeDegreeXHeuristic(insol, doDominating);
+        if (doDominating) removeDominatingHeuristic(insol);
         if (doReduction) removeTwin();
         if (doReduction) applyUnconfined();
         if (doReduction) improvedLP(G);
-        removeDegreeXHeuristic(hvc, doDominating);
-        if (doDominating) removeDominatingHeuristic(hvc);
+        removeDegreeXHeuristic(insol, doDominating);
+        if (doDominating) removeDominatingHeuristic(insol);
         return VCNodes.size() - oldK;
     }
     public int rollOutAllInitial(boolean doReduction, boolean doDominating){
@@ -424,10 +421,10 @@ public class Reduction {
             }
         }
     }
-private void removeDegreeXHeuristic(HeuristicVC hvc, boolean doDominating){
-        while (!hvc.reduceDegTwoQueue.isEmpty() || !hvc.reduceDegZeroQueue.isEmpty() || !hvc.reduceDegOneQueue.isEmpty()) {
-            while (!hvc.reduceDegOneQueue.isEmpty()) {
-                Node node = G.nodeArray[hvc.reduceDegOneQueue.poll()];
+private void removeDegreeXHeuristic(InitialSolution insol, boolean doDominating){
+        while (!insol.reduceDegTwoQueue.isEmpty() || !insol.reduceDegZeroQueue.isEmpty() || !insol.reduceDegOneQueue.isEmpty()) {
+            while (!insol.reduceDegOneQueue.isEmpty()) {
+                Node node = G.nodeArray[insol.reduceDegOneQueue.poll()];
                 if (node.active && node.activeNeighbours == 1) {
                     deg1cuts++;
                     int i = 0;
@@ -436,13 +433,13 @@ private void removeDegreeXHeuristic(HeuristicVC hvc, boolean doDominating){
                     }
                     Node neighbour = G.nodeArray[node.neighbours[i]];
                     removeVCNodes(neighbour);
-                    hvc.reduceDegree(neighbour);
+                    insol.reduceDegree(neighbour);
                     removeUselessNodes(node);
-                    hvc.reduceDegree(node);
+                    insol.reduceDegree(node);
                 }
             }
-            while (!hvc.reduceDegTwoQueue.isEmpty()) {
-                Node node = G.nodeArray[hvc.reduceDegTwoQueue.poll()];
+            while (!insol.reduceDegTwoQueue.isEmpty()) {
+                Node node = G.nodeArray[insol.reduceDegTwoQueue.poll()];
                 if (node.active && node.activeNeighbours == 2) {
                     deg2cuts++;
                     Node first = null, second = null;
@@ -460,24 +457,24 @@ private void removeDegreeXHeuristic(HeuristicVC hvc, boolean doDominating){
                         removeVCNodes(node);
                         removeUselessNodes(second);
                         mergeNodes(first, second, doDominating); // case v,w \not \in E
-                        hvc.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
+                        insol.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
                         mergedNodes.push(new int[]{first.id, second.id, node.id});
                     } else { // case v,w \in E
                         removeUselessNodes(node);
-                        hvc.reduceDegree(node);
+                        insol.reduceDegree(node);
                         removeVCNodes(first);
-                        hvc.reduceDegree(first);
+                        insol.reduceDegree(first);
                         removeVCNodes(second);
-                        hvc.reduceDegree(second);
+                        insol.reduceDegree(second);
                     }
                 }
             }
-            while (!hvc.reduceDegZeroQueue.isEmpty()) {
-                Node node = G.nodeArray[hvc.reduceDegZeroQueue.poll()];
+            while (!insol.reduceDegZeroQueue.isEmpty()) {
+                Node node = G.nodeArray[insol.reduceDegZeroQueue.poll()];
                 if (node.active && node.activeNeighbours == 0) {
                     deg0cuts++;
                     removeUselessNodes(node);
-                    hvc.reduceDegree(node);
+                    insol.reduceDegree(node);
                 }
             }
         }
@@ -498,14 +495,14 @@ private void removeDominating(){
     }
     domtime += System.nanoTime() - time;
 }
-    private void removeDominatingHeuristic(HeuristicVC hvc){
+    private void removeDominatingHeuristic(InitialSolution insol){
         long time = System.nanoTime();
         while (!G.dominatingNodes.isEmpty()){
             Node dominating = G.nodeArray[G.dominatingNodes.poll()];
             Node dominated = G.nodeArray[G.dominatingNodes.poll()];
             if (dominating.active && dominated.active && dominated.triangleCounts[findInArray(dominated.neighbours, dominating.id)] + 1 == dominated.activeNeighbours){
                 removeVCNodes(dominating);
-                hvc.reduceDegree(dominating);
+                insol.reduceDegree(dominating);
                 domcuts++;
             }
         }
@@ -860,7 +857,7 @@ private void removeDominating(){
         }
         while(!q.isEmpty()){
             Integer elem = q.poll();
-            if (checked[elem]==true) continue;
+            if (checked[elem]) continue;
             //if (G.nodeArray[elem].active && unconfined(G, elem)) {
             if (G.nodeArray[elem].active && new_unconfined(elem,N_S)) {
                 //System.out.println("unconfined");

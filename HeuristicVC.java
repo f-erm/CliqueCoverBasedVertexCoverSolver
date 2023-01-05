@@ -3,224 +3,75 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class HeuristicVC {
     Graph G;
-    Reduction reduction;
-    Queue<Integer> reduceDegZeroQueue;
-    Queue<Integer> reduceDegOneQueue;
-    Queue<Integer> reduceDegTwoQueue;
-    int counterOfInexactRed;
-    int inexactRed;
-    int exactRed;
-    int firstActiveNode = 0;
-    Node[] permutation;
-    int[] posInPermutation;
-    int[] borderIndices;
     Node[] lsPermutation;
     int[] posInLsPermutation;
-    int[][] neighbourArrays;
     boolean[] isCandidate;
     int vcBorder;
     int freeBorder;
     long startTime;
-    boolean doDominating;
     Queue<Integer> candidates;
-    public HeuristicVC(Graph G, long startTime, boolean doDominating){
+    public HeuristicVC(Graph G, long startTime){
         this.G = G;
-        neighbourArrays = new int[G.nodeArray.length][];
-        for (int i = 0; i < G.nodeArray.length; i++){
-            neighbourArrays[i] = G.nodeArray[i].neighbours.clone();
-        }
-        //HopcroftKarp hk = new HopcroftKarp(G);
-        reduction = new Reduction(G, null);
-        inexactRed = 0;
-        exactRed = 0;
-        reduceDegZeroQueue = new LinkedList<>();
-        reduceDegOneQueue = new LinkedList<>();
-        reduceDegTwoQueue = new LinkedList<>();
         this.startTime = startTime;
-        this.doDominating = doDominating;
     }
-
-    /**
-     * this function return a vertex cover which might not be optimal
-     * @param highestDegree if true the algorithm takes the highest degree vertex into to vertex cover if the reductions are not applicable anymore, otherwise the neighbours of a lowest degree vertex
-     * @return
-     */
-
-    public LinkedList<Node> vc(boolean highestDegree){
-        LinkedList<Node>vc = new LinkedList<>();
-        int sizeOfOldVC = reduction.VCNodes.size();
-        counterOfInexactRed = 0;
-        //initial reduction
-        reduction.rollOutAllInitial(false, doDominating);
-        permutation = new Node[G.activeNodes];//keeps the nodes sorted
-        posInPermutation = new int[G.nodeArray.length]; //stores the position of a node in permutation
-        int j = 0;
-        for (int i = 0; i < G.nodeArray.length; i++) if (G.nodeArray[i].active) permutation[j++] = G.nodeArray[i];
-        Arrays.sort(permutation);
-        int degree;
-        if (permutation.length > 0) degree = permutation[0].activeNeighbours;
-        else degree = -1;
-        borderIndices = new int[G.activeNodes];
-        for (int i = 0; i < permutation.length; i++){
-            posInPermutation[permutation[i].id] = i;
-            while (degree > permutation[i].activeNeighbours){
-                borderIndices[degree--] = i - 1;
-            }
-        }
-        for (int i = degree; i >= 0; i--) borderIndices[i] = permutation.length - 1;
-        int iterativeSteps = 0;
-        if (G.totalEdges == 0){
-            vc.addAll(reduction.VCNodes);
-            while (!reduction.mergedNodes.isEmpty()){
-                int[] merge = reduction.mergedNodes.pop();
-                if (vc.contains(G.nodeArray[merge[0]])){
-                    vc.add(G.nodeArray[merge[1]]);
-                    vc.remove(G.nodeArray[merge[2]]);
+    LinkedList<Node> metaheuristic(LinkedList<Node> vc){//main function
+        LinkedList<Node> bestSolution = localSearch(vc);
+        int bestSolutionSize = vcBorder;
+        int lastTimeGotWorse = 0;
+        int notImprovedFor = 0;
+        while ((System.nanoTime() - startTime)/1024 < 55000000 && notImprovedFor < 10000000){
+            int lastBorder = vcBorder;
+            if (vcBorder == 0) return vc;//perturb the solution
+            int rand = ThreadLocalRandom.current().nextInt(0, vcBorder);
+            Node u = lsPermutation[rand];
+            LinkedList<Integer> preCandidates = new LinkedList<>();
+            Stack<Node> addedNodes = new Stack<>();
+            for (int n : u.neighbours){
+                Node v = G.nodeArray[n];
+                if (!v.active){
+                    preCandidates.addAll(addToVC(v));
+                    addedNodes.push(v);
                 }
             }
-            vc.addAll(G.partialSolution);
-            return vc;
-        }
-        while (G.totalEdges > 0){
-            iterativeSteps++;
-            //check if an exact reduction can be applied
-            if ((System.nanoTime() - startTime)/1024  < 30000000) reduction.rollOutAllHeuristic(false, this, doDominating);
-            if (G.totalEdges == 0){
-                vc.addAll(reduction.VCNodes);
-                boolean[] inVC = new boolean[G.nodeArray.length];
-                for (Node n : vc) inVC[n.id] = true;
-                while (!reduction.mergedNodes.isEmpty()){
-                    int[] merge = reduction.mergedNodes.pop();
-                    if (inVC[merge[0]]){
-                        inVC[merge[1]] = true;
-                        inVC[merge[2]] = false;
-                    }
+            for (int el : preCandidates) addToCandidates(el);
+            removeFromVC(u, true);
+            Stack<Node> removedNodes = new Stack<>();
+            while (vcBorder != freeBorder){
+                removedNodes.push(lsPermutation[vcBorder]);
+                removeFromVC(lsPermutation[vcBorder], true);
+            }
+            Stack[] actionStack = twoImprovements(); // improve solution
+            if (vcBorder > lastBorder && (lastTimeGotWorse < bestSolutionSize || ThreadLocalRandom.current().nextDouble() > 1.0 / (1.0 + (lastBorder - vcBorder) * (bestSolutionSize - vcBorder)))){
+                lastTimeGotWorse++;
+                Stack<Integer> actions = actionStack[0];
+                Stack<Boolean> addOrDelete = actionStack[1];
+                while (!actions.isEmpty()){
+                    boolean remove = addOrDelete.pop();
+                    int toDo = actions.pop();
+                    if (remove) removeFromVC(G.nodeArray[toDo], false);
+                    else addToVC(G.nodeArray[toDo]); //revert old solution if solution was bad and we recently took a bad solution
                 }
-                vc.clear();
-                for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
-                int cnt = 0;
-                while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 30) {
-                    LinkedList<Node> newVC = metaheuristic(vc);
-                    if (newVC.size() < vc.size()) {
-                        vc = newVC;
-                        cnt = 0;
-                    }
-                    else cnt++;
-                }
-                vc.addAll(G.partialSolution);
-                return vc;
+                while (!removedNodes.isEmpty()) addToVC(removedNodes.pop());
+                addToVC(u);
+                while (!addedNodes.isEmpty()) removeFromVC(addedNodes.pop(), false);
             }
-
-            //else use an inexact reduction;
-            if (highestDegree){
-                while (!permutation[firstActiveNode].active) firstActiveNode++;
-                Node maxDegreeNode = permutation[firstActiveNode++];
-                vc.add(maxDegreeNode);
-                G.removeNode(maxDegreeNode);
-                reduceDegree(maxDegreeNode);
-                counterOfInexactRed ++;
-                inexactRed ++;
+            else if (vcBorder > lastBorder) lastTimeGotWorse = 0;
+            if (vcBorder < lastBorder) lastTimeGotWorse = 0;
+            else lastTimeGotWorse++;
+            if (vcBorder < bestSolutionSize) {
+                bestSolution = new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
+                bestSolutionSize = vcBorder;
             }
-            else {
-                int minDegree = Integer.MAX_VALUE;
-                Node minDegreeNode = null;
-                for (int id = 0; id < G.nodeArray.length; id++) {
-                    Node node = G.nodeArray[id];
-                    if (node.active && node.activeNeighbours < minDegree){
-                        minDegreeNode = node;
-                        minDegree = node.activeNeighbours;
-                    }
-                }
-                if(minDegreeNode != null){
-                    for (int neighbourID: minDegreeNode.neighbours) {
-                        Node u = G.nodeArray[neighbourID];
-                        if(u.active){
-                            vc.add(u);
-                            G.removeNode(u);
-                        }
-                    }
-                    G.removeNode(minDegreeNode);
-                    counterOfInexactRed ++;
-                    inexactRed ++;
-                }
-            }
-
+            else notImprovedFor++;
         }
-        vc.addAll(reduction.VCNodes);
-        boolean[] inVC = new boolean[G.nodeArray.length];
-        for (Node n : vc) inVC[n.id] = true;
-        while (!reduction.mergedNodes.isEmpty()){
-            int[] merge = reduction.mergedNodes.pop();
-            if (inVC[merge[0]]){
-                inVC[merge[1]] = true;
-                inVC[merge[2]] = false;
-            }
-        }
-        vc.clear();
-        for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
-        int cnt = 0;
-        while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 30) {
-            LinkedList<Node> newVC = metaheuristic(vc);
-            if (newVC.size() < vc.size()) {
-                vc = newVC;
-                cnt = 0;
-            }
-            else cnt++;
-        }
-        vc.addAll(G.partialSolution);
-        return vc;
+        return bestSolution;
     }
-
-    public void reduceDegree(Node node){
-        for (int i = 0; i < node.neighbours.length; i++) if (G.nodeArray[node.neighbours[i]].active){
-            reduceSingleDegree(node.neighbours[i]);
-        }
-    }
-    private void reduceSingleDegree(int n){
-        Node u = G.nodeArray[n];
-        if (u.activeNeighbours == 0) reduceDegZeroQueue.offer(u.id);
-        if (u.activeNeighbours == 1) reduceDegOneQueue.offer(u.id);
-        if (u.activeNeighbours == 2) reduceDegTwoQueue.offer(u.id);
-        int oldDegree = G.nodeArray[n].activeNeighbours + 1;
-        permutation[posInPermutation[n]] = permutation[borderIndices[oldDegree]];
-        posInPermutation[permutation[borderIndices[oldDegree]].id] = posInPermutation[n];
-        permutation[borderIndices[oldDegree]] = G.nodeArray[n];
-        posInPermutation[n] = borderIndices[oldDegree];
-        if (borderIndices[oldDegree] > 0) borderIndices[oldDegree]--;
-    }
-    public void reduceDegreeMerge(Node node, Node second, int newNeighbours){
-        int k = node.neighbours.length - newNeighbours;
-        for (int i = 0; i < second.neighbours.length; i++){
-            if (!G.nodeArray[second.neighbours[i]].active) continue;
-            if (k >= node.neighbours.length || node.neighbours[k] != second.neighbours[i]){
-                reduceSingleDegree(second.neighbours[i]);
-            }
-            else k++;
-        }
-        if (newNeighbours == 0){
-            reduceSingleDegree(node.id);
-        }
-        for (int deg = node.activeNeighbours + 2 - newNeighbours; deg <= node.activeNeighbours; deg++){
-            if (borderIndices[deg] == 0){
-                borderIndices[deg] = 1;
-                continue;
-            }
-            permutation[posInPermutation[node.id]] = permutation[borderIndices[deg] + 1];
-            posInPermutation[permutation[borderIndices[deg] + 1].id] = posInPermutation[node.id];
-            permutation[borderIndices[deg] + 1] = node;
-            posInPermutation[node.id] = borderIndices[deg] + 1;
-            firstActiveNode = Math.min(borderIndices[deg] + 1, firstActiveNode);
-            borderIndices[deg]++;
-        }
-    }
-
     private LinkedList<Node> localSearch(LinkedList<Node> vc){
         for (Node n : G.nodeArray){ //setup: nodes in the VC are active, activeNeighbours is #VC-neighbours
-            n.neighbours = neighbourArrays[n.id];//use a copy of the original graph
             n.active = false;
             n.activeNeighbours = 0;
         }
-        candidates = new LinkedList<>();//allows fast random accessing & deleting
+        candidates = new LinkedList<>();
         isCandidate = new boolean[G.nodeArray.length];
         lsPermutation = new Node[G.nodeArray.length];//array consists of three blocks: 1)non-free VC nodes 2)free VC nodes 3)not-VC-nodes (free means they can be removed from the VC)
         posInLsPermutation = new int[G.nodeArray.length];
@@ -333,60 +184,7 @@ public class HeuristicVC {
         candidates.setSize(candidates.size() - 1);*/
         return candidates.poll();
     }
-    private LinkedList<Node> metaheuristic(LinkedList<Node> vc){//main function
-        int steps = 0;
-        LinkedList<Node> bestSolution = localSearch(vc);
-        int bestSolutionSize = vcBorder;
-        int lastTimeGotWorse = 0;
-        int notImprovedFor = 0;
-        while ((System.nanoTime() - startTime)/1024 < 55000000 && notImprovedFor < 1000000){
-            int lastBorder = vcBorder;
-            if (vcBorder == 0) return vc;//perturb the solution
-            int rand = ThreadLocalRandom.current().nextInt(0, vcBorder);
-            Node u = lsPermutation[rand];
-            LinkedList<Integer> preCandidates = new LinkedList<>();
-            Stack<Node> addedNodes = new Stack<>();
-            for (int n : u.neighbours){
-                Node v = G.nodeArray[n];
-                if (!v.active){
-                    preCandidates.addAll(addToVC(v));
-                    addedNodes.push(v);
-                }
-            }
-            for (int el : preCandidates) addToCandidates(el);
-            removeFromVC(u, true);
-            Stack<Node> removedNodes = new Stack<>();
-            while (vcBorder != freeBorder){
-                removedNodes.push(lsPermutation[vcBorder]);
-                removeFromVC(lsPermutation[vcBorder], true);
-            }
-            Stack[] actionStack = twoImprovements(); // improve solution
-            if (vcBorder > lastBorder && (lastTimeGotWorse < bestSolutionSize || ThreadLocalRandom.current().nextDouble() > 1.0 / (1.0 + (lastBorder - vcBorder) * (bestSolutionSize - vcBorder)))){
-                lastTimeGotWorse++;
-                Stack<Integer> actions = actionStack[0];
-                Stack<Boolean> addOrDelete = actionStack[1];
-                while (!actions.isEmpty()){
-                    boolean remove = addOrDelete.pop();
-                    int toDo = actions.pop();
-                    if (remove) removeFromVC(G.nodeArray[toDo], false);
-                    else addToVC(G.nodeArray[toDo]); //revert old solution if solution was bad and we recently took a bad solution
-                }
-                while (!removedNodes.isEmpty()) addToVC(removedNodes.pop());
-                addToVC(u);
-                while (!addedNodes.isEmpty()) removeFromVC(addedNodes.pop(), false);
-            }
-            else if (vcBorder > lastBorder) lastTimeGotWorse = 0;
-            if (vcBorder < lastBorder) lastTimeGotWorse = 0;
-            else lastTimeGotWorse++;
-            if (vcBorder < bestSolutionSize) {
-                bestSolution = new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
-                bestSolutionSize = vcBorder;
-            }
-            else notImprovedFor++;
-            steps++;
-        }
-        return bestSolution;
-    }
+
     private Stack<Integer>[] twoImprovements(){
         Stack<Integer> actions = new Stack<>();
         Stack<Boolean> addOrDelete = new Stack<>();//true for add

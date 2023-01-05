@@ -57,6 +57,10 @@ public class Node implements Comparable<Node>, Cloneable{
         N.active = this.active;
         N.activeNeighbours = this.activeNeighbours;
         N.neighbours = this.neighbours.clone();
+        N.triangleCounts = this.triangleCounts.clone();
+        N.neighbourPositions = this.neighbourPositions.clone();
+        N.color = this.color;
+        N.triangles = (LinkedList<Integer>) this.triangles.clone();
         return N;
 
     }

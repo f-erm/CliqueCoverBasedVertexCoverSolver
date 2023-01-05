@@ -70,7 +70,7 @@ public class Parser {
         }
         try {
             for (Node n : g.nodeArray) { // find initial triangles in the graph
-                if ((System.nanoTime() - time) / 1024 > 0) {
+                if ((System.nanoTime() - time) / 1024 > 2000000) {
                     doDominating = false;
                     for (Node node : g.nodeArray) node.triangles.clear();
                     break;
