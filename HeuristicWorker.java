@@ -16,7 +16,7 @@ public class HeuristicWorker implements Callable {
     }
 
     @Override
-    public LinkedList<Node> call() throws Exception {
+    public LinkedList<Node> call() {
         int cnt = 0;
         LinkedList<Node> vc = new LinkedList<>();
         for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
