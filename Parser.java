@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.*;
 
 public class Parser {
-    static boolean doDominating = true;
     public static Graph parseGraph(String pathname){
         //Create Graph as Hashmap of OldNodes
         Graph g = new Graph();
@@ -46,8 +45,10 @@ public class Parser {
         long time = System.nanoTime();
         LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
         Collections.sort(ll);
+        Collections.reverse(ll);
         g.oldNodeList = ll;
         g.setPartialSolution(Preprossessing.doAllThePrep(g));
+        Collections.sort(ll);
         //convert list of OldNodes into array of Nodes
         g.nodeArray = new Node[g.oldNodeList.size()];
         int j = 0;
@@ -61,58 +62,26 @@ public class Parser {
             g.activeNodes++;
             g.nodeArray[i++] = n;
         }
-        for (Node n : g.nodeArray){
-            for (i = 0; i < n.neighbours.length; i++){
-                Node v = g.nodeArray[n.neighbours[i]];
-                if (v.id < n.id) v.neighbourPositions[n.neighbourPositions[i]] = i;
-                else v.neighbourPositions[arrayContains(v.neighbours, n.id)] = i;
-            }
-        }
-        try {
-            for (Node n : g.nodeArray) { // find initial triangles in the graph
-                if ((System.nanoTime() - time) / 1024 > 2000000) {
-                    doDominating = false;
-                    for (Node node : g.nodeArray) node.triangles.clear();
-                    break;
+        g.permutation = new Node[g.nodeArray.length];
+        g.posInPermutation = new int[g.nodeArray.length];
+        g.borderIndices = new int[g.nodeArray.length];
+        int deg = 0;
+        if (g.nodeArray.length > 0) {
+            deg = g.nodeArray[0].activeNeighbours;
+            for (int k = deg + 1; k < g.borderIndices.length; k++) g.borderIndices[k] = -1;
+            for (Node n : g.nodeArray) {
+                if (n.activeNeighbours < deg) {
+                    while (deg > n.activeNeighbours) g.borderIndices[deg--] = n.id - 1;
                 }
-                int cu = 0;
-                for (int u : n.neighbours) {
-                    if (n.id > u) {
-                        cu++;
-                        continue;
-                    }
-                    int cv = 0;
-                    for (int v : g.nodeArray[u].neighbours) {
-                        if (u >= v) {
-                            cv++;
-                            continue;
-                        }
-                        int cont = arrayContains(n.neighbours, v);
-                        if (cont >= 0) {
-                            n.triangleCounts[cu]++;
-                            n.triangles.add(cu);
-                            n.triangles.add(cont);
-                            n.triangles.add(cv);
-                            g.nodeArray[u].triangles.add(n.neighbourPositions[cu]);
-                            g.nodeArray[u].triangles.add(cv);
-                            g.nodeArray[u].triangles.add(cont);
-                            g.nodeArray[v].triangles.add(n.neighbourPositions[cont]);
-                            g.nodeArray[v].triangles.add(g.nodeArray[u].neighbourPositions[cv]);
-                            g.nodeArray[v].triangles.add(cu);
-                            g.nodeArray[u].triangleCounts[n.neighbourPositions[cu]]++;
-                            g.nodeArray[u].triangleCounts[cv]++;
-                            g.nodeArray[v].triangleCounts[g.nodeArray[u].neighbourPositions[cv]]++;
-                            n.triangleCounts[cont]++;
-                            g.nodeArray[v].triangleCounts[n.neighbourPositions[cont]]++;
-                        }
-                        cv++;
-                    }
-                    cu++;
+                g.permutation[n.id] = n;
+                g.posInPermutation[n.id] = n.id;
+                for (i = 0; i < n.neighbours.length; i++) {
+                    Node v = g.nodeArray[n.neighbours[i]];
+                    if (v.id < n.id) v.neighbourPositions[n.neighbourPositions[i]] = i;
+                    else v.neighbourPositions[arrayContains(v.neighbours, n.id)] = i;
                 }
             }
-        }catch (OutOfMemoryError e){
-            doDominating = false;
-            for (Node n : g.nodeArray) n.triangles.clear();
+            for (; deg >= 0; deg--) g.borderIndices[deg] = g.nodeArray.length - 1;
         }
         return g;
     }

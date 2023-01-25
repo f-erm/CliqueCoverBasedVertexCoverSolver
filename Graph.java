@@ -1,22 +1,32 @@
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.ListIterator;
 import java.util.Queue;
 
 public class Graph implements Cloneable{
 
     LinkedList<OldNode> oldNodeList; //for the beginning only
     Node[] nodeArray; //stores the nodes of the graph, whether they are active or not, ordered
-                      //by the highest degree.
+                      //by the highest degree
+    Node[] permutation;
+    int[] posInPermutation;
+    int[] borderIndices;
+    Queue<Integer> reduceDegZeroQueue;
+    Queue<Integer> reduceDegOneQueue;
+    Queue<Integer> reduceDegTwoQueue;
+    int firstActiveNode;
     HashMap<String, OldNode> nodeHashMap; // for parsing only
     LinkedList<Node> partialSolution;
     int totalEdges;
+
     int activeNodes;
     Queue<Integer> dominatingNodes = new LinkedList<>();
     public Graph(){
         nodeHashMap = new HashMap<>();
         totalEdges = 0;
         dominatingNodes = new LinkedList<>();
+        reduceDegZeroQueue = new LinkedList<>();
+        reduceDegOneQueue = new LinkedList<>();
+        reduceDegTwoQueue = new LinkedList<>();
     }
     public Graph(boolean hi){
 
@@ -44,37 +54,10 @@ public class Graph implements Cloneable{
      * @param n node to remove
      */
     public void removeNode(Node n){
-        n.active = false;
-        for (int i = 0; i < n.neighbours.length; i++){
-            nodeArray[n.neighbours[i]].activeNeighbours--;
-            if (nodeArray[n.neighbours[i]].activeNeighbours < 0){
-                throw new RuntimeException("a node has less than 0 active neighbours");
-            }
-            if (n.triangleCounts[i] > 0) nodeArray[n.neighbours[i]].triangleCounts[n.neighbourPositions[i]] = 0;
-        }
-        totalEdges = totalEdges - n.activeNeighbours;
-        activeNodes --;
-        //keep triangle-numbers up-to-date. Also maintain dynamic list of dominated vertices dominatingNodes.
-        ListIterator<Integer> li = n.triangles.listIterator();
-        while(li.hasNext()){
-            int a = n.neighbours[li.next()];
-            int b = n.neighbours[li.next()];
-            int pos = li.next();
-            if (!nodeArray[a].active || !nodeArray[b].active) continue;
-            if (pos >= nodeArray[a].neighbours.length || nodeArray[a].neighbours[pos] != b) pos = findInArray(nodeArray[a].neighbours, b);
-            if (nodeArray[a].active && nodeArray[b].active) {
-                nodeArray[a].triangleCounts[pos]--;
-                nodeArray[b].triangleCounts[nodeArray[a].neighbourPositions[pos]]--;
-                if (nodeArray[a].triangleCounts[pos] + 1 == nodeArray[a].activeNeighbours){
-                    dominatingNodes.offer(b);
-                    dominatingNodes.offer(a);
-                }
-                else if (nodeArray[b].triangleCounts[nodeArray[a].neighbourPositions[pos]] + 1 == nodeArray[b].activeNeighbours){
-                    dominatingNodes.offer(a);
-                    dominatingNodes.offer(b);
-                }
-            }
-        }
+        //checkCorrectness();
+        removeNodeWithoutDegreeReducing(n);
+        reduceDegree(n);
+        //checkCorrectness();
     }
 
     /**
@@ -82,25 +65,15 @@ public class Graph implements Cloneable{
      * @param n node to readd
      */
     public void reeaddNode(Node n){
+        //checkCorrectness();
         n.active = true;
         for (int i = 0; i < n.neighbours.length; i++){
-            nodeArray[n.neighbours[i]].activeNeighbours++;
-            if (nodeArray[i].active && n.triangleCounts[i] > 0) nodeArray[n.neighbours[i]].triangleCounts[n.neighbourPositions[i]] = n.triangleCounts[i];
+            if (nodeArray[n.neighbours[i]].active) nodeArray[n.neighbours[i]].activeNeighbours++;
         }
         totalEdges += n.activeNeighbours;
         activeNodes ++;
-        //keep triangle-numbers up-to-date.
-        ListIterator<Integer> li = n.triangles.listIterator();
-        while(li.hasNext()){
-            int a = n.neighbours[li.next()];
-            int b = n.neighbours[li.next()];
-            int pos = li.next();
-            if (pos >= nodeArray[a].neighbours.length || nodeArray[a].neighbours[pos] != b) pos = findInArray(nodeArray[a].neighbours, b);
-            if (nodeArray[a].active && nodeArray[b].active) {
-                nodeArray[a].triangleCounts[pos]++;
-                nodeArray[b].triangleCounts[nodeArray[a].neighbourPositions[pos]]++;
-            }
-        }
+        increaseDegree(n);
+        //checkCorrectness();
     }
 private int findInArray(int[] array, int el){
         for (int i = 0; i < array.length; i++) if (array[i] == el) return i;
@@ -120,6 +93,17 @@ private int findInArray(int[] array, int el){
             totalEdges --;
         }
         oldNodeList.remove(toRemove);
+    }
+    public void removeNodeWithoutDegreeReducing(Node n){
+        n.active = false;
+        for (int i = 0; i < n.neighbours.length; i++){
+            if (nodeArray[n.neighbours[i]].active) nodeArray[n.neighbours[i]].activeNeighbours--;
+            if (nodeArray[n.neighbours[i]].activeNeighbours < 0){
+                throw new RuntimeException("a node has less than 0 active neighbours");
+            }
+        }
+        totalEdges = totalEdges - n.activeNeighbours;
+        activeNodes --;
     }
     public void setPartialSolution(LinkedList<Node> partialSolution){
         this.partialSolution = partialSolution;
@@ -186,7 +170,99 @@ private int findInArray(int[] array, int el){
         Gnew.partialSolution = this.partialSolution; //this might be janky. partialsolution refers to the uncopied nodes.
         Gnew.totalEdges = this.totalEdges;
         Gnew.activeNodes = this.activeNodes;
+        Gnew.posInPermutation = this.posInPermutation.clone();
+        Gnew.permutation = new Node[this.permutation.length];
+        for (int i = 0; i < Gnew.permutation.length; i++) Gnew.permutation[i] = Gnew.nodeArray[this.permutation[i].id];
+        reduceDegZeroQueue = new LinkedList<>();
+        reduceDegOneQueue = new LinkedList<>();
+        reduceDegTwoQueue = new LinkedList<>();
+        Gnew.borderIndices = this.borderIndices.clone();
+        Gnew.firstActiveNode = this.firstActiveNode;
         Gnew.dominatingNodes = new LinkedList<>(this.dominatingNodes);
         return Gnew;
+    }
+    public void reduceDegree(Node node){
+        for (int i = 0; i < node.neighbours.length; i++) if (nodeArray[node.neighbours[i]].active){
+            reduceSingleDegree(node.neighbours[i]);
+        }
+    }
+    private void increaseDegree(Node node){
+        firstActiveNode = Math.min(firstActiveNode, posInPermutation[node.id]);
+        for (int i = 0; i < node.neighbours.length; i++) if (nodeArray[node.neighbours[i]].active){
+            increaseSingleDegree(node.neighbours[i]);
+            firstActiveNode = Math.min(firstActiveNode, posInPermutation[node.neighbours[i]]);
+        }
+    }
+    private void reduceSingleDegree(int n){
+        Node u = nodeArray[n];
+        /*if (u.activeNeighbours == 0) reduceDegZeroQueue.offer(u.id);
+        if (u.activeNeighbours == 1) reduceDegOneQueue.offer(u.id);
+        if (u.activeNeighbours == 2) reduceDegTwoQueue.offer(u.id);*/
+        int oldDegree = nodeArray[n].activeNeighbours + 1;
+        permutation[posInPermutation[n]] = permutation[borderIndices[oldDegree]];
+        posInPermutation[permutation[borderIndices[oldDegree]].id] = posInPermutation[n];
+        permutation[borderIndices[oldDegree]] = nodeArray[n];
+        posInPermutation[n] = borderIndices[oldDegree];
+        borderIndices[oldDegree]--;
+    }
+    private void increaseSingleDegree(int n){
+        Node u = nodeArray[n];
+        /*if (u.activeNeighbours == 0) reduceDegZeroQueue.offer(u.id);
+        if (u.activeNeighbours == 1) reduceDegOneQueue.offer(u.id);
+        if (u.activeNeighbours == 2) reduceDegTwoQueue.offer(u.id);*/
+        int degree = nodeArray[n].activeNeighbours;
+        permutation[posInPermutation[n]] = permutation[borderIndices[degree] + 1];
+        posInPermutation[permutation[borderIndices[degree] + 1].id] = posInPermutation[n];
+        permutation[borderIndices[degree] + 1] = nodeArray[n];
+        posInPermutation[n] = borderIndices[degree] + 1;
+        borderIndices[degree]++;
+    }
+    public void reduceDegreeMerge(Node node, Node second, int newNeighbours){
+        int k = node.neighbours.length - newNeighbours;
+        for (int i = 0; i < second.neighbours.length; i++){
+            if (!nodeArray[second.neighbours[i]].active) continue;
+            if (k >= node.neighbours.length || node.neighbours[k] != second.neighbours[i]){
+                reduceSingleDegree(second.neighbours[i]);
+            }
+            else k++;
+        }
+        for (int deg = node.activeNeighbours + 1 - newNeighbours; deg <= node.activeNeighbours; deg++){
+            permutation[posInPermutation[node.id]] = permutation[borderIndices[deg] + 1];
+            posInPermutation[permutation[borderIndices[deg] + 1].id] = posInPermutation[node.id];
+            permutation[borderIndices[deg] + 1] = node;
+            posInPermutation[node.id] = borderIndices[deg] + 1;
+            borderIndices[deg]++;
+        }
+        firstActiveNode = Math.min(posInPermutation[node.id], firstActiveNode);
+        //checkCorrectness();
+    }
+    public void increaseDegreeMerge(Node node, LinkedList<Integer> newNeighbours){
+        for (int a : newNeighbours) reduceSingleDegree(a);
+        for (int deg = node.activeNeighbours + newNeighbours.size(); deg > node.activeNeighbours; deg--){
+            permutation[posInPermutation[node.id]] = permutation[borderIndices[deg]];
+            posInPermutation[permutation[borderIndices[deg]].id] = posInPermutation[node.id];
+            permutation[borderIndices[deg]] = node;
+            posInPermutation[node.id] = borderIndices[deg];
+            borderIndices[deg]--;
+        }
+        //checkCorrectness();
+    }
+    private void checkCorrectness(){
+        int deg = 100000;
+        for (int i = 0; i < firstActiveNode; i++)  if (permutation[i].active){
+            int aa = 0;
+        }
+        for (Node n : permutation){
+            if (!n.active) {
+                if (borderIndices[n.activeNeighbours] < posInPermutation[n.id]){
+                    int eeehhhh = 1;
+                }
+                continue;
+            }
+            if (n.activeNeighbours > deg){
+                int aaaa = 0;
+            }
+            if (n.activeNeighbours < deg) deg = n.activeNeighbours;
+        }
     }
 }

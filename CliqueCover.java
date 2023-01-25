@@ -1,4 +1,3 @@
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Random;
@@ -21,7 +20,7 @@ public class CliqueCover {
 
     public int cliqueCoverIterations(int k, int reerun, LinkedList<Integer> oldPermutation) {
         if (oldPermutation == null){
-            permutation = new LinkedList<Integer>();
+            permutation = new LinkedList<>();
             for (int i = 0; i < G.nodeArray.length; i++) {
                 permutation.add(i);
             }
@@ -82,7 +81,7 @@ public class CliqueCover {
 
         }
         LinkedList<Integer> perm = new LinkedList<>();
-        shuffleArray(colorclasses);
+        //shuffleArray(colorclasses);
         for (LinkedList<Integer> color: colorclasses) {
             if (color == null) break;
             perm.addAll(color);

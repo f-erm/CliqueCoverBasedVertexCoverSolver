@@ -3,6 +3,7 @@ import java.util.LinkedList;
 import java.util.concurrent.*;
 public class Algorithms {
     int recursiveSteps;
+    boolean branchedOnNeighbours = true;
     long totalTimeHK = 0;
     long totalTimeCC = 0;
     int totalBranchCutsHK = 0;
@@ -31,7 +32,7 @@ public class Algorithms {
     public LinkedList<Node> vc(Graph G) {
         HopcroftKarp hk = new HopcroftKarp(G);
         reduction = new Reduction(G, hk);
-        int l = reduction.rollOutAll(G.activeNodes, true);
+        int l = reduction.rollOutAllInitial(true);
         hk.searchForAMatching();
         cc = new CliqueCover(G);
         cc.cliqueCoverIterations(10, 5, null);
@@ -86,10 +87,13 @@ public class Algorithms {
         if (k < 0) {
             return null;
         }
+        branchedOnNeighbours = true;
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
-        int l = reduction.rollOutAll(k, depth % 25 == -9);
+        //int l = reduction.rollOutAll();//doesn't roll out anything, just writes a delimiter to the stack
+        int l = reduction.rollOutAllInitial(depth % 25 == -9);
+        //int l = reduction.rollOutAll(k, depth % 25 == -9);
         k -= l;
         if (k < 0) {
             return null;
@@ -97,16 +101,18 @@ public class Algorithms {
         if (G.totalEdges <= 0 || G.activeNodes <= 0) {
             return new LinkedList<>();
         }
-        //long time = System.nanoTime();
-        hk.searchForAMatching();
-        //totalTimeHK += System.nanoTime() - time;
-        if (k < hk.totalCycleLB) {
-            totalBranchCutsHK++;
+        long time = System.nanoTime();
+        if (true) {
+            hk.searchForAMatching();
+            totalTimeHK += System.nanoTime() - time;
+            if (k < hk.totalCycleLB) {
+                totalBranchCutsHK++;
 
-            return null;
+                return null;
+            }
         }
-        //time = System.nanoTime();
-        if (doCliqueCover) {
+        time = System.nanoTime();
+        if (doCliqueCover && branchedOnNeighbours) {
             cc = new CliqueCover(G);
             if (k < cc.cliqueCoverIterations(1, 2, lastPerm)) {
                 totalBranchCutsCC++;
@@ -123,19 +129,23 @@ public class Algorithms {
             }
 
             lastPerm = cc.permutation;
-            //totalTimeCC += System.nanoTime() - time;
+            totalTimeCC += System.nanoTime() - time;
         }
         LinkedList<Node> S = new LinkedList<>();
         LinkedList<Node> neighbours = new LinkedList<>();
         Node v;
         while (true) {
-            //find first node to branch. starts with first node of last iteration.
-            if (G.nodeArray[firstActiveNode].activeNeighbours == 0 || !G.nodeArray[firstActiveNode].active){
-                firstActiveNode++;
+            if (G.permutation[G.firstActiveNode].activeNeighbours == 0 || !G.permutation[G.firstActiveNode].active){
+                G.firstActiveNode++;
                 continue;
             }
+            //find first node to branch. starts with first node of last iteration.
+            /*if (G.nodeArray[firstActiveNode].activeNeighbours == 0 || !G.nodeArray[firstActiveNode].active){
+                firstActiveNode++;
+                continue;
+            }*/
             //If delta(G) <= 2 there exists a simple solution. We check here and apply said solution
-            v = G.nodeArray[firstActiveNode];
+            v = G.permutation[G.firstActiveNode];
             /*if (v.activeNeighbours < 3){
                 boolean graphIsSimple = true;
                 for (Node n : G.nodeArray){
@@ -155,6 +165,7 @@ public class Algorithms {
 
         //Branch for deleting all neighbors
         if (k >= v.activeNeighbours && v.activeNeighbours > 0){
+            branchedOnNeighbours = true;
             for (int u: v.neighbours) {
                 Node toDelete = G.nodeArray[u];
                 if (toDelete.active){
@@ -199,6 +210,7 @@ public class Algorithms {
             }
         }
         //branch for deleting the node instead
+        branchedOnNeighbours = false;
         G.removeNode(v);
         LinkedList<Node> ll = new LinkedList<>();
         ll.add(v);

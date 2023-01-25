@@ -20,8 +20,7 @@ public class InitialSolution {
     int[] borderIndices;
     int[][] neighbourArrays;
     long startTime;
-    boolean doDominating;
-    public InitialSolution(Graph G, long startTime, boolean doDominating){
+    public InitialSolution(Graph G, long startTime){
         this.G = G;
         neighbourArrays = new int[G.nodeArray.length][];
         for (int i = 0; i < G.nodeArray.length; i++){
@@ -34,7 +33,6 @@ public class InitialSolution {
         reduceDegOneQueue = new LinkedList<>();
         reduceDegTwoQueue = new LinkedList<>();
         this.startTime = startTime;
-        this.doDominating = doDominating;
     }
 
     /**
@@ -48,7 +46,7 @@ public class InitialSolution {
         int sizeOfOldVC = reduction.VCNodes.size();
         counterOfInexactRed = 0;
         //initial reduction
-        reduction.rollOutAllInitial(false, doDominating);
+        reduction.rollOutAllInitial(false);
         permutation = new Node[G.activeNodes];//keeps the nodes sorted
         posInPermutation = new int[G.nodeArray.length]; //stores the position of a node in permutation
         int j = 0;
@@ -79,7 +77,7 @@ public class InitialSolution {
         }
         while (G.totalEdges > 0){
             //check if an exact reduction can be applied
-            if ((System.nanoTime() - startTime)/1024  < 30000000) reduction.rollOutAllHeuristic(false, this, doDominating);
+            if ((System.nanoTime() - startTime)/1024  < 30000000) reduction.rollOutAllHeuristic(false, this);
             if (G.totalEdges == 0){
                 return threadedLocalSearch(vc);
             }
@@ -178,7 +176,7 @@ public class InitialSolution {
         vc.clear();
         for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
         for (Node n : G.nodeArray) n.neighbours = neighbourArrays[n.id];
-        int procCount = Runtime.getRuntime().availableProcessors();
+        int procCount = 1;//Runtime.getRuntime().availableProcessors();
         ThreadPoolExecutor exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(procCount);//create threadpool based on available cores.
         Future<LinkedList<Node>>[] allResults = new Future[procCount];
         for (int i = 0; i < allResults.length; i++){
