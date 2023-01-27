@@ -176,6 +176,28 @@ private int findInArray(int[] array, int el){
     }
 
 
+    public Graph reduceGraph(){
+        Graph G = new Graph(true);
+        G.nodeArray = new Node[this.activeNodes];
+        int[] translation = new int[G.activeNodes];
+        int i = 0;
+        for (Node n : G.nodeArray){
+            if (n.active){
+                Node newNode = new Node(n.name,i,n.activeNeighbours);
+                newNode.color = n.color;
+                newNode.activeNeighbours = n.activeNeighbours;
+                G.nodeArray[i] = newNode;
+                translation[i] = n.id;
+            }
+            i++;
+        }
+        //translation in beide richtung erlauben um...
+        //die Neighbors der neuen Nodes richtig zu uebersetzen.
+        //in neuen Graph zurueck uebersetzen.
+        return G;
+    }
+
+
     @Override
     public Object clone(){
         Graph Gnew = new Graph(false);
