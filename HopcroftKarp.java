@@ -1,3 +1,4 @@
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
@@ -249,6 +250,78 @@ public class HopcroftKarp implements Cloneable {
                     cycleLB++;
                 }
                 totalCycleLB += (cycleLB + 1)/ 2;
+            }
+        }
+    }
+    public void searchForAMatchingNew(){
+        if (G.activeNodes == 0) return;
+        while (bfs()){
+            for (int i = 0; i < size; i++){
+                if (pair[i] == nil && B.nodeArray[i].active){
+                    dfs(B.nodeArray[i]);
+                }
+            }
+        }
+        boolean[] inCycle = new boolean[size];
+        int[] cycleCover = new int[size];
+        int[] base = new int[size];
+        int[] pos = new int[size];
+        int cyclCnt = 0;
+        totalCycleLB = 0;
+        for (int i = 0; i < size; i++){
+            if (!inCycle[i] && B.nodeArray[i].active && pair[i] != nil){
+                int cycleLB = 1;
+                int count = 1;
+                int partner = pair[i];
+                inCycle[i] = true;
+                base[i] = i;
+                cycleCover[0] = i;
+                pos[cyclCnt++] = i;
+                while (partner != i + size){
+                    if (partner == nil){
+                        cycleLB--;
+                        break;
+                    }
+                    if (inCycle[partner - size]){
+                        cycleLB -= 2;
+                        break;
+                    }
+                    inCycle[partner - size] = true;
+                    base[partner - size] = i;
+                    cycleCover[count++] = partner - size;
+                    pos[cyclCnt++] = partner - size;
+                    partner = pair[partner - size];
+                    cycleLB++;
+                }
+                boolean clique = true;
+                for (int j = 0; j < count; j++) {
+                    Node v = G.nodeArray[cycleCover[j]];
+                    int num = 0;
+                    for (int u : v.neighbours) if (G.nodeArray[u].active && base[u] == base[v.id]) num++;
+                    if (num != count - 1) {
+                        clique = false;
+                        break;
+                    }
+                }
+                if (clique) {
+                    totalCycleLB += count - 1;
+                }
+                else {
+                    while (count >= 6){
+                        HashSet<Integer> isNeighbour = new HashSet<>();
+                        for (int j = 0; j < count; j++){
+                            for (int n : G.nodeArray[cycleCover[j]].neighbours) if (G.nodeArray[n].active && base[n] == base[cycleCover[j]]) isNeighbour.add(n);
+                            int second = cycleCover[(j+1) % count];
+                            for (int n : G.nodeArray[second].neighbours) if (G.nodeArray[n].active && base[n] == base[second] && isNeighbour.contains(cycleCover[(pos[n] + 1) % count])){
+                                int cycleDiff = (pos[n] - pos[second] + count) % count;
+                                if (cycleDiff % 2 != 0){
+                                    totalCycleLB++;
+                                }
+                            }
+                        }
+                    }
+                    totalCycleLB += (cycleLB + 1)/ 2;
+                }
             }
         }
     }

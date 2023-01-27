@@ -3,6 +3,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class HeuristicVC {
     Graph G;
+    final int TIME_LIMIT = 5000000;
     Node[] lsPermutation;
     int[] posInLsPermutation;
     boolean[] isCandidate;
@@ -19,7 +20,7 @@ public class HeuristicVC {
         int bestSolutionSize = vcBorder;
         int lastTimeGotWorse = 0;
         int notImprovedFor = 0;
-        while ((System.nanoTime() - startTime)/1024 < 55000000 && notImprovedFor < 10000000){
+        while ((System.nanoTime() - startTime)/1024 < TIME_LIMIT && notImprovedFor < 10000000){
             int lastBorder = vcBorder;
             if (vcBorder == 0) return vc;//perturb the solution
             int rand = ThreadLocalRandom.current().nextInt(0, vcBorder);
@@ -118,11 +119,11 @@ public class HeuristicVC {
         while(oldBorder != vcBorder) {//actual local search begins here
             oldBorder = vcBorder;
             twoImprovements();
-            if ((System.nanoTime() - startTime)/1024 > 55500000) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
+            if ((System.nanoTime() - startTime)/1024 > TIME_LIMIT) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
             threeImprovements();
-            if ((System.nanoTime() - startTime)/1024 > 55500000) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
+            if ((System.nanoTime() - startTime)/1024 > TIME_LIMIT) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
             fourImprovements();
-            if ((System.nanoTime() - startTime)/1024 > 55500000) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
+            if ((System.nanoTime() - startTime)/1024 > TIME_LIMIT) return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
         }
         return new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
     }

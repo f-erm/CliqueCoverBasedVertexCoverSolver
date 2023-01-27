@@ -7,7 +7,6 @@ public class Reduction {
     Stack<int[]> mergedNodes;
     Stack<int[]> removedNodes;
     Stack<Integer> neighbourPosStack;
-    Stack<Integer> triangleAdditions;
     Graph G;
     HopcroftKarp hk;
     long deg1Time = 0;
@@ -16,8 +15,6 @@ public class Reduction {
     int deg2cuts = 0;
     long deg0Time = 0;
     int deg0cuts = 0;
-    int domcuts = 0;
-    long domtime = 0;
     long unconfTime = 0;
     int unconfcuts = 0;
     long bussTime = 0;
@@ -37,14 +34,16 @@ public class Reduction {
         mergedNodes = new Stack<>();
         this.hk = hk;
         neighbourPosStack = new Stack<>();
-        triangleAdditions = new Stack<>();
+    }
+    public int rollOutAll(){
+        removedNodes.push(new int[]{0});
+        return 0;
     }
 
     public int rollOutAll(int k, boolean doReduction){
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
         removeDegreeX(k);
-        removeDominating();
         long time = System.nanoTime();
         if (doReduction) removeTwin();
         twintime += System.nanoTime() - time;
@@ -58,33 +57,34 @@ public class Reduction {
             if (VCNodes.size() - oldK > k) return k + 1;
             lpTime += System.nanoTime() - time;
             removeDegreeX(k);
-            removeDominating();
             if (BussRule(k)) {
                 return k + 1;
             }
         return VCNodes.size() - oldK;
     }
 
-    public int rollOutAllHeuristic(boolean doReduction, InitialSolution insol, boolean doDominating){
+    public int rollOutAllHeuristic(boolean doReduction, InitialSolution insol){
         int oldK = VCNodes.size();
-        removeDegreeXHeuristic(insol, doDominating);
-        if (doDominating) removeDominatingHeuristic(insol);
+        removeDegreeXHeuristic(insol);
         if (doReduction) removeTwin();
         if (doReduction) applyUnconfined();
         if (doReduction) improvedLP(G);
-        removeDegreeXHeuristic(insol, doDominating);
-        if (doDominating) removeDominatingHeuristic(insol);
+        removeDegreeXHeuristic(insol);
         return VCNodes.size() - oldK;
     }
-    public int rollOutAllInitial(boolean doReduction, boolean doDominating){
+    public int rollOutAllInitial(boolean doReduction){
         int oldK = VCNodes.size();
-        removeDegreeXInitial(doDominating);
-        if (doDominating) removeDominating();
-        if (doReduction) removeTwin();
-        if (doReduction) applyUnconfined();
-        if (doReduction) improvedLP(G);
-        removeDegreeXInitial(doDominating);
-        if (doDominating) removeDominating();
+        removedNodes.push(new int[]{0});
+        removeDegreeXInitial();
+        //if (doReduction) removeTwin();
+        boolean again = doReduction;
+        while (again) {
+            again = applyUnconfined();
+            again = again || improvedLP(G);
+            int oldN = VCNodes.size();
+            removeDegreeXInitial();
+            if (oldN != VCNodes.size()) again = true;
+        }
         return VCNodes.size() - oldK;
     }
 
@@ -120,8 +120,8 @@ public class Reduction {
                             removeUselessNodes(G.nodeArray[third]);
                             removeVCNodes(G.nodeArray[v]);
                             removeVCNodes(G.nodeArray[i]);
-                            mergeNodes(G.nodeArray[first], G.nodeArray[second], true);
-                            mergeNodes(G.nodeArray[first], G.nodeArray[third], true);
+                            mergeNodes(G.nodeArray[first], G.nodeArray[second]);
+                            mergeNodes(G.nodeArray[first], G.nodeArray[third]);
                             mergedNodes.push(new int[]{first, second, v});
                             mergedNodes.push(new int[]{first, third, i});
                         }
@@ -242,9 +242,11 @@ public class Reduction {
                     if (current.active) second = current;
                 }
                 if (!arrayContains(first.neighbours, second.id)) {
+                    int oldNumNeighbours =  first.neighbours.length;
                     removeVCNodes(node);
-                    removeUselessNodes(second);
-                    mergeNodes(first, second, true); // case v,w \not \in E
+                    removeUselessNodesWithoutDegreeReducing(second);
+                    mergeNodes(first, second); // case v,w \not \in E
+                    G.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
                     mergedNodes.push(new int[]{first.id, second.id, node.id});
                 } else { // case v,w \in E
                     removeUselessNodes(node);
@@ -269,7 +271,7 @@ public class Reduction {
         }
     }
 }
-    private void removeDegreeXInitial(boolean doDominating) {
+    private void removeDegreeXInitial() {
         Queue<Integer> deg0 = new LinkedList<>();
         Queue<Integer> deg1 = new LinkedList<>();
         Queue<Integer> deg2 = new LinkedList<>();
@@ -306,9 +308,11 @@ public class Reduction {
                     if (current.active) second = current;
                 }
                 if (!arrayContains(first.neighbours, second.id)) {
+                    int oldNumNeighbours = first.neighbours.length;
                     removeVCNodes(node);
-                    removeUselessNodes(second);
-                    mergeNodes(first, second, doDominating); // case v,w \not \in E
+                    removeUselessNodesWithoutDegreeReducing(second);
+                    mergeNodes(first, second); // case v,w \not \in E
+                    G.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
                     for (int n : second.neighbours) {
                         if (!G.nodeArray[n].active) continue;
                         if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
@@ -380,9 +384,11 @@ public class Reduction {
                         if (current.active) second = current;
                     }
                     if (!arrayContains(first.neighbours, second.id)) {
+                        int oldNumNeighbours = first.neighbours.length;
                         removeVCNodes(node);
-                        removeUselessNodes(second);
-                        mergeNodes(first, second, doDominating); // case v,w \not \in E
+                        removeUselessNodesWithoutDegreeReducing(second);
+                        mergeNodes(first, second); // case v,w \not \in E
+                        G.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
                         for (int n : second.neighbours) {
                             if (!G.nodeArray[n].active) continue;
                             if (G.nodeArray[n].activeNeighbours == 0) deg0.offer(n);
@@ -421,7 +427,7 @@ public class Reduction {
             }
         }
     }
-private void removeDegreeXHeuristic(InitialSolution insol, boolean doDominating){
+private void removeDegreeXHeuristic(InitialSolution insol){
         while (!insol.reduceDegTwoQueue.isEmpty() || !insol.reduceDegZeroQueue.isEmpty() || !insol.reduceDegOneQueue.isEmpty()) {
             while (!insol.reduceDegOneQueue.isEmpty()) {
                 Node node = G.nodeArray[insol.reduceDegOneQueue.poll()];
@@ -455,9 +461,10 @@ private void removeDegreeXHeuristic(InitialSolution insol, boolean doDominating)
                     if (!arrayContains(first.neighbours, second.id)) {
                         int oldNumNeighbours = first.neighbours.length;
                         removeVCNodes(node);
-                        removeUselessNodes(second);
-                        mergeNodes(first, second, doDominating); // case v,w \not \in E
+                        removeUselessNodesWithoutDegreeReducing(second);
+                        mergeNodes(first, second); // case v,w \not \in E
                         insol.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
+                        G.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
                         mergedNodes.push(new int[]{first.id, second.id, node.id});
                     } else { // case v,w \in E
                         removeUselessNodes(node);
@@ -480,34 +487,7 @@ private void removeDegreeXHeuristic(InitialSolution insol, boolean doDominating)
         }
 }
 
-    /**
-     * Goes through the dynamic dominatingNodes list and adds the dominating nodes to the vertex cover.
-     */
-private void removeDominating(){
-    long time = System.nanoTime();
-    while (!G.dominatingNodes.isEmpty()){
-        Node dominating = G.nodeArray[G.dominatingNodes.poll()];
-        Node dominated = G.nodeArray[G.dominatingNodes.poll()];
-        if (dominating.active && dominated.active && dominated.triangleCounts[findInArray(dominated.neighbours, dominating.id)] + 1 == dominated.activeNeighbours){
-            removeVCNodes(dominating);
-            domcuts++;
-        }
-    }
-    domtime += System.nanoTime() - time;
-}
-    private void removeDominatingHeuristic(InitialSolution insol){
-        long time = System.nanoTime();
-        while (!G.dominatingNodes.isEmpty()){
-            Node dominating = G.nodeArray[G.dominatingNodes.poll()];
-            Node dominated = G.nodeArray[G.dominatingNodes.poll()];
-            if (dominating.active && dominated.active && dominated.triangleCounts[findInArray(dominated.neighbours, dominating.id)] + 1 == dominated.activeNeighbours){
-                removeVCNodes(dominating);
-                insol.reduceDegree(dominating);
-                domcuts++;
-            }
-        }
-        domtime += System.nanoTime() - time;
-    }
+
     private int findInArray(int[] array, int el){
         for (int i = 0; i < array.length; i++) if (array[i] == el) return i;
         return -1;
@@ -526,7 +506,7 @@ private void removeDominating(){
                     break;
                 case 2: //useful Nodes
                     G.reeaddNode(node);
-                    VCNodes.remove(node);
+                    VCNodes.removeLast();
                     LinkedList<Node> b = new LinkedList<>();
                     b.add(node);
                     if (hk != null) hk.updateAddNodes(b);
@@ -535,16 +515,15 @@ private void removeDominating(){
                     //VCNodes.remove(G.nodeArray[action[3]]);
                     int[] newArray = new int[node.neighbours.length - action[3]];
                     int[] newPositionArray = new int[newArray.length];
-                    int[] newTriangleArray = new int[newArray.length];
                     System.arraycopy(node.neighbours, 0, newArray, 0, newArray.length);
                     System.arraycopy(node.neighbourPositions, 0, newPositionArray, 0, newArray.length);
-                    System.arraycopy(node.triangleCounts, 0, newTriangleArray, 0, newArray.length);
+                    LinkedList<Integer> oldNeighbours = new LinkedList<>();
                     for (int i = node.neighbours.length - 1; i >= newArray.length; i--){
+                        oldNeighbours.add(node.neighbours[i]);
                         Node neighbour = G.nodeArray[node.neighbours[i]];
                         for (int j = 0; j < neighbour.neighbours.length; j++){
                             if (neighbour.neighbours[j] == node.id) {
                                 neighbour.neighbourPositions[j] = neighbourPosStack.pop();
-                                neighbour.triangleCounts[j] = G.nodeArray[action[2]].triangleCounts[neighbour.neighbourPositions[j]];
                                 neighbour.neighbours[j] = action[2];
                                 neighbour.activeNeighbours--;
                                 node.activeNeighbours--;
@@ -555,16 +534,8 @@ private void removeDominating(){
                     }
                     node.neighbours = newArray;
                     node.neighbourPositions = newPositionArray;
-                    node.triangleCounts = newTriangleArray;
                     if (hk != null) mergedNodes.pop();
-                    for (int i = 0; i < action[4]; i++) node.triangles.removeLast();
-                    while (true){
-                        int n = triangleAdditions.pop();
-                        if (n == -1) break;
-                        G.nodeArray[n].triangles.removeLast();
-                        G.nodeArray[n].triangles.removeLast();
-                        G.nodeArray[n].triangles.removeLast();
-                    }
+                    G.increaseDegreeMerge(node, oldNeighbours);
                     break;
             }
             action = removedNodes.pop();
@@ -616,6 +587,16 @@ private void removeDominating(){
             hk.updateDeleteNodes(a);
         }
     }
+    private void removeUselessNodesWithoutDegreeReducing(Node node){
+        removedNodes.push(new int[]{1, node.id});
+        G.removeNodeWithoutDegreeReducing(node);
+        LinkedList<Node> a = new LinkedList<>();
+        a.add(node);
+        //for the heuristic we don't need to compute hk, so it is null
+        if(hk != null){
+            hk.updateDeleteNodes(a);
+        }
+    }
 
     private void removeVCNodes(Node node){
         removedNodes.push(new int[]{2, node.id});
@@ -635,8 +616,7 @@ private void removeDominating(){
      * @implNote     merges nodeB into nodeA
      *              (Array resizing is done here!)
      */
-    private void mergeNodes(Node nodeA, Node nodeB, boolean doDominating){
-        if (doDominating) triangleAdditions.push(-1);
+    private void mergeNodes(Node nodeA, Node nodeB){
         LinkedList<Integer> addedNeighbours = new LinkedList<>();
         Queue<Integer> nodeBPositions = new LinkedList<>();
         for (int n : nodeB.neighbours){
@@ -656,63 +636,19 @@ private void removeDominating(){
         }
         int[] newArray = new int[nodeA.neighbours.length + addedNeighbours.size()];
         int[] newPositionArray = new int[nodeA.neighbours.length + addedNeighbours.size()];
-        int[] newTriangleArray = new int[nodeA.neighbours.length + addedNeighbours.size()];
         System.arraycopy(nodeA.neighbours, 0, newArray, 0, nodeA.neighbours.length);
         System.arraycopy(nodeA.neighbourPositions, 0, newPositionArray, 0, nodeA.neighbours.length);
-        System.arraycopy(nodeA.triangleCounts, 0, newTriangleArray, 0, nodeA.neighbours.length);
         int j = nodeA.neighbours.length;
         for (int id : addedNeighbours){
             newArray[j] = id;
             int nodeBPos = nodeBPositions.poll();
             neighbourPosStack.push(G.nodeArray[id].neighbourPositions[nodeBPos]);
             G.nodeArray[id].neighbourPositions[nodeBPos] = j;
-            newPositionArray[j] = nodeBPos;
-            if (doDominating) {
-                int tn = getTriangleNumber(id, nodeA.id, nodeBPos, j); //(nodeA,id) edges may have new triangles
-                G.nodeArray[id].triangleCounts[nodeBPos] = tn;
-                newTriangleArray[j++] = tn;
-            }
-            else j++;
-        }
-        //update triangles and triangleCount after merge.
-        int count = 0;
-        if (doDominating) {
-            ListIterator<Integer> li = nodeB.triangles.listIterator();
-            while (li.hasNext()) {
-                int a = li.next();
-                int b = li.next();
-                int pos = li.next();
-                int indexA = addedNeighbours.indexOf(nodeB.neighbours[a]);
-                int indexB = addedNeighbours.indexOf(nodeB.neighbours[b]);
-                if (indexA >= 0 && indexB >= 0) {
-                    nodeA.triangles.add(indexA + nodeA.neighbours.length);
-                    nodeA.triangles.add(indexB + nodeA.neighbours.length);
-                    nodeA.triangles.add(pos);
-                    newTriangleArray[indexA + nodeA.neighbours.length]++;
-                    newTriangleArray[indexB + nodeA.neighbours.length]++;
-                    G.nodeArray[nodeB.neighbours[a]].triangleCounts[newPositionArray[indexA + nodeA.neighbours.length]]++;
-                    G.nodeArray[nodeB.neighbours[b]].triangleCounts[newPositionArray[indexB + nodeA.neighbours.length]]++;
-                    count++;
-                }
-            }
-
-            //add dominating vertices to the dynamic list.
-            j = nodeA.neighbours.length;
-            for (int id : addedNeighbours) {
-                int tn = newTriangleArray[j++];
-                if (tn + 1 == G.nodeArray[id].activeNeighbours) {
-                    G.dominatingNodes.offer(nodeA.id);
-                    G.dominatingNodes.offer(id);
-                } else if (tn + 1 == nodeA.activeNeighbours + addedNeighbours.size()) {
-                    G.dominatingNodes.offer(id);
-                    G.dominatingNodes.offer(nodeA.id);
-                }
-            }
+            newPositionArray[j++] = nodeBPos;
         }
         nodeA.neighbours = newArray;
         nodeA.neighbourPositions = newPositionArray;
-        nodeA.triangleCounts = newTriangleArray;
-        removedNodes.push(new int[]{3, nodeA.id, nodeB.id, addedNeighbours.size(), count * 3});
+        removedNodes.push(new int[]{3, nodeA.id, nodeB.id, addedNeighbours.size()});
         nodeA.activeNeighbours += addedNeighbours.size();
         //for the heuristic we don't need to compute hk, so it is null
         if(hk != null){
@@ -724,31 +660,7 @@ private void removeDominating(){
         for (int i : array) if (i == el) return true;
         return false;
     }
-    private int getTriangleNumber(int a, int b, int vPos, int uPos) {
-        Node u = G.nodeArray[a];
-        Node v = G.nodeArray[b];
-        int count = 0;
-        for (int i = 0; i < u.neighbours.length; i++) {
-            int cont = findInArray(v.neighbours, u.neighbours[i]);
-            if (cont >= 0){
-                count++;
-                //change triangles and store the information on a stack for easy reverting
-                u.triangles.add(vPos);
-                u.triangles.add(i);
-                u.triangles.add(cont);
-                triangleAdditions.push(a);
-                v.triangles.add(uPos);
-                v.triangles.add(cont);
-                v.triangles.add(i);
-                triangleAdditions.push(b);
-                G.nodeArray[u.neighbours[i]].triangles.add(u.neighbourPositions[i]);
-                G.nodeArray[u.neighbours[i]].triangles.add(v.neighbourPositions[cont]);
-                G.nodeArray[u.neighbours[i]].triangles.add(vPos);
-                triangleAdditions.push(u.neighbours[i]);
-            }
-        }
-        return count;
-    }
+
 
 
     private boolean new_unconfined(Integer v, BitSet N_S){
