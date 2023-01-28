@@ -20,6 +20,10 @@ public class Graph implements Cloneable{
 
     int activeNodes;
     Queue<Integer> dominatingNodes = new LinkedList<>();
+
+    int[] translationNewToOld;
+    HashMap<Integer,Integer> translationOldToNew;
+
     public Graph(){
         nodeHashMap = new HashMap<>();
         totalEdges = 0;
@@ -161,23 +165,67 @@ private int findInArray(int[] array, int el){
 
 
     public Graph reduceGraph(){
-        Graph G = new Graph(true);
+        //setup new Graph
+        Graph G = new Graph();
+        G.partialSolution = this.partialSolution;
         G.nodeArray = new Node[this.activeNodes];
-        int[] translation = new int[G.activeNodes];
+        G.activeNodes = this.activeNodes;
+        int[] translationNewToOld = new int[this.activeNodes];//simple array is sufficient for this direction
+        HashMap<Integer,Integer> translationOldToNew = new HashMap<Integer,Integer>(this.activeNodes);//needed size of map is already known
+        int totalEdgesNew = 0;
         int i = 0;
-        for (Node n : G.nodeArray){
+        //create new Nodes
+        for (Node n : this.nodeArray){
             if (n.active){
                 Node newNode = new Node(n.name,i,n.activeNeighbours);
                 newNode.color = n.color;
                 newNode.activeNeighbours = n.activeNeighbours;
+                newNode.neighbourPositions = new int[n.activeNeighbours];
                 G.nodeArray[i] = newNode;
-                translation[i] = n.id;
+                translationNewToOld[i] = n.id;
+                translationOldToNew.put(n.id,i);
             }
             i++;
         }
-        //translation in beide richtung erlauben um...
-        //die Neighbors der neuen Nodes richtig zu uebersetzen.
-        //in neuen Graph zurueck uebersetzen.
+        //create new Edges
+        for (Node n : this.nodeArray){
+            if (n.active){
+                Node representant = G.nodeArray[translationOldToNew.get(n.id)];//translation of n
+                totalEdgesNew += n.activeNeighbours;
+                int j = 0;
+                for (int neighbor : n.neighbours){
+                    if(this.nodeArray[neighbor].active){
+                        representant.neighbours[j++] = translationOldToNew.get(neighbor);
+                    }
+                }
+            }
+        }
+        //New Graph contains its own translation
+        G.totalEdges = totalEdgesNew / 2;
+        G.translationNewToOld = translationNewToOld;
+        G.translationOldToNew = translationOldToNew;
+        //Uebersetzung permutation, posinpermutaion und borderIndice. Momentan einfach aus Parser kopiert. Wahrscheinlich effizienter moeglich.
+        G.permutation = new Node[this.activeNodes];
+        G.posInPermutation = new int[this.activeNodes];
+        G.borderIndices = new int[this.activeNodes];
+        int deg = 0;
+        if (G.nodeArray.length > 0) {
+            deg = G.nodeArray[0].activeNeighbours;
+            for (int k = deg + 1; k < G.borderIndices.length; k++) G.borderIndices[k] = -1;
+            for (Node n : G.nodeArray) {
+                if (n.activeNeighbours < deg) {
+                    while (deg > n.activeNeighbours) G.borderIndices[deg--] = n.id - 1;
+                }
+                G.permutation[n.id] = n;
+                G.posInPermutation[n.id] = n.id;
+                for (i = 0; i < n.neighbours.length; i++) {
+                    Node v = G.nodeArray[n.neighbours[i]];
+                    if (v.id < n.id) v.neighbourPositions[n.neighbourPositions[i]] = i;
+                    else v.neighbourPositions[arrayContains(v.neighbours, n.id)] = i;
+                }
+            }
+            for (; deg >= 0; deg--) G.borderIndices[deg] = G.nodeArray.length - 1;
+        }
         return G;
     }
 
@@ -287,4 +335,14 @@ private int findInArray(int[] array, int el){
             if (n.activeNeighbours < deg) deg = n.activeNeighbours;
         }
     }
+
+    private static int arrayContains(int[] array, int el){
+        int j = 0;
+        for (int i : array) {
+            if (i == el) return j;
+            j++;
+        }
+        return -1;
+    }
+
 }

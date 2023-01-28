@@ -34,9 +34,11 @@ public class Branching {
             return solution;
         }
         else reduction.revertReduction();
+        reduction.rollOutAllInitial(true);
+        //Graph OldG = G;//Fuer kleineren Graphen
+        //G = G.reduceGraph();//fuer kleineren Graphen
         InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime());
         upperBound = initialSolution.vc(true);
-        reduction.rollOutAllInitial(true);
         cc = new CliqueCover(G);
         solution = new Stack<>();
         solution.addAll(G.partialSolution);
@@ -67,6 +69,7 @@ public class Branching {
             }
         }
         return upperBound;
+        //return returnModified(upperBound, OldG, G);//Fuer kleineren Graphen
     }
     public int branch(int c, int k, int depth, LinkedList<Integer> lastPerm){
         c += reduction.rollOutAllInitial(false);
@@ -180,5 +183,14 @@ public class Branching {
             }
         }
         return mirrors;
+    }
+
+    LinkedList<Node> returnModified(LinkedList<Node> vc, Graph oldG, Graph newG){
+        //substitutes the fake nodes of newG obtained by reducing for the real nodes of oldG
+        LinkedList<Node> r = new LinkedList<>();
+        for (Node n : vc){
+            r.add(oldG.nodeArray[newG.translationNewToOld[n.id]]);
+        }
+        return r;
     }
 }
