@@ -8,6 +8,7 @@ public class Node implements Comparable<Node>, Cloneable{
     int color;
     //the next attributes are necessary to find the strong connected components
 
+    boolean inVC;
 
     /**
      * translates an old node to a new node.
@@ -37,6 +38,7 @@ public class Node implements Comparable<Node>, Cloneable{
         active = true;
         this.id = id;
         this.neighbours = new int[size];
+        inVC = false;
     }
 
 
