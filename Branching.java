@@ -68,6 +68,8 @@ public class Branching {
         }
         return upperBound;
     }
+
+    // c is the current solution size, k is the upper bound
     public int branch(int c, int k, int depth, LinkedList<Integer> lastPerm){
         c += reduction.rollOutAllInitial(false);
         hk.searchForAMatching();
