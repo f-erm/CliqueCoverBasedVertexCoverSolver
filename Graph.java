@@ -175,7 +175,7 @@ private int findInArray(int[] array, int el){
         int totalEdgesNew = 0;
         int i = 0;
         //create new Nodes
-        for (Node n : this.nodeArray){
+        for (Node n : this.permutation){
             if (n.active){
                 Node newNode = new Node(n.name,i,n.activeNeighbours);
                 newNode.color = n.color;
@@ -184,8 +184,8 @@ private int findInArray(int[] array, int el){
                 G.nodeArray[i] = newNode;
                 translationNewToOld[i] = n.id;
                 translationOldToNew.put(n.id,i);
+                i++;
             }
-            i++;
         }
         //create new Edges
         for (Node n : this.nodeArray){

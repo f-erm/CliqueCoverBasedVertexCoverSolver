@@ -34,10 +34,10 @@ public class Branching {
             return solution;
         }
         else reduction.revertReduction();
-        reduction.rollOutAllInitial(true);
         //Graph OldG = G;//Fuer kleineren Graphen
         //G = G.reduceGraph();//fuer kleineren Graphen
         InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime());
+        reduction.rollOutAllInitial(true);
         upperBound = initialSolution.vc(true);
         cc = new CliqueCover(G);
         solution = new Stack<>();
