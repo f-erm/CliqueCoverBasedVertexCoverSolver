@@ -1,3 +1,5 @@
+import java.util.LinkedList;
+
 public class Node implements Comparable<Node>, Cloneable{
     String name;
     int id;
@@ -6,6 +8,7 @@ public class Node implements Comparable<Node>, Cloneable{
     boolean active;
     int activeNeighbours;
     int color;
+    LinkedList<Packing> affectedConstraints = new LinkedList<>();
     //the next attributes are necessary to find the strong connected components
 
     boolean inVC;

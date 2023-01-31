@@ -309,7 +309,18 @@ public class Reduction {
                 }
                 if (!arrayContains(first.neighbours, second.id)) {
                     int oldNumNeighbours = first.neighbours.length;
-                    removeVCNodes(node);
+                    //removeVCNodes(node);
+                    //BEGIN alternative
+                    removedNodes.push(new int[]{2, node.id, 0});
+                    VCNodes.add(node);
+                    G.removeNode(node);
+                    LinkedList<Node> a = new LinkedList<>();
+                    a.add(node);
+                    if(hk != null){
+                        hk.updateDeleteNodes(a);
+                    }
+                    node.inVC = true;
+                    //END alternative
                     removeUselessNodesWithoutDegreeReducing(second);
                     mergeNodes(first, second); // case v,w \not \in E
                     G.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
@@ -385,7 +396,18 @@ public class Reduction {
                     }
                     if (!arrayContains(first.neighbours, second.id)) {
                         int oldNumNeighbours = first.neighbours.length;
-                        removeVCNodes(node);
+                        //removeVCNodes(node);
+                        //BEGIN alternative
+                        removedNodes.push(new int[]{2, node.id, 0});
+                        VCNodes.add(node);
+                        G.removeNode(node);
+                        LinkedList<Node> a = new LinkedList<>();
+                        a.add(node);
+                        if(hk != null){
+                            hk.updateDeleteNodes(a);
+                        }
+                        node.inVC = true;
+                        //END alternative
                         removeUselessNodesWithoutDegreeReducing(second);
                         mergeNodes(first, second); // case v,w \not \in E
                         G.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
@@ -460,7 +482,18 @@ private void removeDegreeXHeuristic(InitialSolution insol){
                     }
                     if (!arrayContains(first.neighbours, second.id)) {
                         int oldNumNeighbours = first.neighbours.length;
-                        removeVCNodes(node);
+                        //removeVCNodes(node);
+                        //BEGIN alternative
+                        removedNodes.push(new int[]{2, node.id, 0});
+                        VCNodes.add(node);
+                        G.removeNode(node);
+                        LinkedList<Node> a = new LinkedList<>();
+                        a.add(node);
+                        if(hk != null){
+                            hk.updateDeleteNodes(a);
+                        }
+                        node.inVC = true;
+                        //END alternative
                         removeUselessNodesWithoutDegreeReducing(second);
                         mergeNodes(first, second); // case v,w \not \in E
                         insol.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
@@ -505,6 +538,8 @@ private void removeDegreeXHeuristic(InitialSolution insol){
                     if (hk != null) hk.updateAddNodes(a);
                     break;
                 case 2: //useful Nodes
+                    if (action.length == 2) for (Packing p : node.affectedConstraints) p.redoVC();
+                    node.inVC = false;
                     G.reeaddNode(node);
                     VCNodes.removeLast();
                     LinkedList<Node> b = new LinkedList<>();
@@ -512,7 +547,6 @@ private void removeDegreeXHeuristic(InitialSolution insol){
                     if (hk != null) hk.updateAddNodes(b);
                     break;
                 case 3: //merged Nodes :(
-                    //VCNodes.remove(G.nodeArray[action[3]]);
                     int[] newArray = new int[node.neighbours.length - action[3]];
                     int[] newPositionArray = new int[newArray.length];
                     System.arraycopy(node.neighbours, 0, newArray, 0, newArray.length);
@@ -536,6 +570,10 @@ private void removeDegreeXHeuristic(InitialSolution insol){
                     node.neighbourPositions = newPositionArray;
                     if (hk != null) mergedNodes.pop();
                     G.increaseDegreeMerge(node, oldNeighbours);
+                    /*for (Packing p : node.affectedConstraints){
+                        if (p.type == 1) p.right -= action[3];
+                        else p.right -= action[4];
+                    }*/
                     break;
             }
             action = removedNodes.pop();
@@ -577,7 +615,7 @@ private void removeDegreeXHeuristic(InitialSolution insol){
     }
 
 
-    private void removeUselessNodes(Node node){
+    public void removeUselessNodes(Node node){
         removedNodes.push(new int[]{1, node.id});
         G.removeNode(node);
         LinkedList<Node> a = new LinkedList<>();
@@ -598,7 +636,7 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         }
     }
 
-    private void removeVCNodes(Node node){
+    public void removeVCNodes(Node node){
         removedNodes.push(new int[]{2, node.id});
         VCNodes.add(node);
         G.removeNode(node);
@@ -608,6 +646,8 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         if(hk != null){
             hk.updateDeleteNodes(a);
         }
+        node.inVC = true;
+        for (Packing p : node.affectedConstraints) p.updateVC();
     }
 
     /**
@@ -648,7 +688,17 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         }
         nodeA.neighbours = newArray;
         nodeA.neighbourPositions = newPositionArray;
-        removedNodes.push(new int[]{3, nodeA.id, nodeB.id, addedNeighbours.size()});
+        int c = 0;
+        /*for (Packing p : nodeA.affectedConstraints){
+            if (p.type == 1) p.right += addedNeighbours.size();
+            else{
+                HashSet<Integer> hs = new HashSet<>();
+                for (int n : p.startNode.neighbours) if (G.nodeArray[n].active) hs.add(n);
+                for (int n : addedNeighbours) if (!hs.contains(n)) c++;
+                p.right += c;
+            }
+        }*/
+        removedNodes.push(new int[]{3, nodeA.id, nodeB.id, addedNeighbours.size(), c});
         nodeA.activeNeighbours += addedNeighbours.size();
         //for the heuristic we don't need to compute hk, so it is null
         if(hk != null){

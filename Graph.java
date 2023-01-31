@@ -17,17 +17,14 @@ public class Graph implements Cloneable{
     HashMap<String, OldNode> nodeHashMap; // for parsing only
     LinkedList<Node> partialSolution;
     int totalEdges;
-
     int activeNodes;
-    Queue<Integer> dominatingNodes = new LinkedList<>();
-
+    boolean packingViolated = false;
     int[] translationNewToOld;
     HashMap<Integer,Integer> translationOldToNew;
 
     public Graph(){
         nodeHashMap = new HashMap<>();
         totalEdges = 0;
-        dominatingNodes = new LinkedList<>();
         reduceDegZeroQueue = new LinkedList<>();
         reduceDegOneQueue = new LinkedList<>();
         reduceDegTwoQueue = new LinkedList<>();
@@ -248,7 +245,6 @@ private int findInArray(int[] array, int el){
         reduceDegTwoQueue = new LinkedList<>();
         Gnew.borderIndices = this.borderIndices.clone();
         Gnew.firstActiveNode = this.firstActiveNode;
-        Gnew.dominatingNodes = new LinkedList<>(this.dominatingNodes);
         return Gnew;
     }
     public void reduceDegree(Node node){

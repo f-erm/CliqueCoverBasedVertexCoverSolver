@@ -1,4 +1,3 @@
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Stack;
@@ -307,7 +306,7 @@ public class HopcroftKarp implements Cloneable {
                     totalCycleLB += count - 1;
                 }
                 else {
-                    while (count >= 6){
+                    /*while (count >= 6){
                         HashSet<Integer> isNeighbour = new HashSet<>();
                         for (int j = 0; j < count; j++){
                             for (int n : G.nodeArray[cycleCover[j]].neighbours) if (G.nodeArray[n].active && base[n] == base[cycleCover[j]]) isNeighbour.add(n);
@@ -319,7 +318,7 @@ public class HopcroftKarp implements Cloneable {
                                 }
                             }
                         }
-                    }
+                    }*/
                     totalCycleLB += (cycleLB + 1)/ 2;
                 }
             }

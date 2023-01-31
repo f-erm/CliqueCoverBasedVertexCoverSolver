@@ -104,8 +104,6 @@ public class CliqueCover {
             Node myNode = G.nodeArray[i];
             if (!myNode.active) continue;
             //for all neighbors that are active and colored decrement that color
-            int remember = -1;
-            boolean createNewClass = true;
             for (int neighbourInfo: myNode.neighbours) {
                 Node neighbour = G.nodeArray[neighbourInfo];
                 if (!neighbour.active || neighbour.color == -1) continue;
@@ -164,11 +162,11 @@ public class CliqueCover {
     public void improveSolution(){
         for (int l = 0; l < FirstFreeColor; l++) {
             LinkedList<Integer> color = colorclasses[l];
-            if (color.size() < 3){
-                int i = 0;
+            if (color.size() < 5){
+                LinkedList<Integer> toRemove = new LinkedList<>();
                 for (int nodeID: color) {
                     Node myNode = G.nodeArray[nodeID];
-                    int orignalColor = myNode.color;
+                    int originalColor = myNode.color;
                     for (int neighbourInfo: myNode.neighbours) {
                         Node neighbour = G.nodeArray[neighbourInfo];
                         if (!neighbour.active || neighbour.color == -1) continue;
@@ -177,7 +175,7 @@ public class CliqueCover {
                     int bestColorSize = 0;
                     int bestColor = -1;
                     for (int j = 0; j < FirstFreeColor; j++) {
-                        if (colorcounts[j] == 0 && j != orignalColor) {
+                        if (colorcounts[j] == 0 && j != originalColor) {
                             if (bestColorSize < colorclasses[j].size()) {
                                 bestColor = j;
                                 bestColorSize = colorclasses[bestColor].size();
@@ -185,8 +183,8 @@ public class CliqueCover {
                         }
                     }
                     if (bestColor != -1){
-                        colorcounts[orignalColor]--;
-                        colorclasses[orignalColor].remove(i); //this is in O(2)
+                        colorcounts[originalColor]--;
+                        toRemove.add(myNode.id);
                         colorclasses[bestColor].add(myNode.id);
                         myNode.color = bestColor;
                         colorcounts[bestColor]++;
@@ -196,16 +194,18 @@ public class CliqueCover {
                         if (!neighbour.active || neighbour.color==-1) continue;
                         colorcounts[neighbour.color] ++;
                     }
-                    if (color.isEmpty()){
+                    if (colorcounts[l] == 0){
                         //System.out.println("# we actually removed a color!!!!!!!!");
-                        colorclasses[orignalColor] = colorclasses[--FirstFreeColor];
-                        colorcounts[orignalColor] = colorcounts[FirstFreeColor];
+                        colorclasses[originalColor] = colorclasses[--FirstFreeColor];
+                        colorcounts[originalColor] = colorcounts[FirstFreeColor];
                         colorcounts[FirstFreeColor] = 0;
-                        colorclasses[FirstFreeColor].clear();
+                        colorclasses[FirstFreeColor] = new LinkedList<>();
+                        l--;
                     }
-                    i++;
                 }
-
+                for (int el : toRemove) {
+                    color.remove((Integer) el); // O(2)
+                }
             }
         }
     }

@@ -4,7 +4,7 @@ public class Branching {
     Graph G;
     int hkCuts = 0;
     int ccCuts = 0;
-    double progress;
+    int packingCuts = 0;
     HopcroftKarp hk;
     Reduction reduction;
     CliqueCover cc;
@@ -12,11 +12,11 @@ public class Branching {
     Stack<int[]> bestMergedNodes;
     LinkedList<Node> upperBound;
     int recursiveSteps;
+    int firstLowerBound;
     public Branching(Graph G){
         this.G = G;
         recursiveSteps = 0;
         hk = new HopcroftKarp(G);
-        progress = 0.0;
     }
     public LinkedList<Node> solve(){
         reduction = new Reduction(G, hk);
@@ -62,9 +62,9 @@ public class Branching {
         }
         System.out.println("# Clique Cover Quality: " + bestLowerBound);
         System.out.println("# upper bound: " + upperBound.size());
-        int lb = Math.max(hk.totalCycleLB, bestLowerBound);
-        System.out.println("# lower bound: " + (lb + reduction.VCNodes.size() + G.partialSolution.size()));
-        if (lb == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
+        firstLowerBound = Math.max(hk.totalCycleLB, bestLowerBound);
+        System.out.println("# lower bound: " + (firstLowerBound + reduction.VCNodes.size() + G.partialSolution.size()));
+        if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
         int solSize = branch(G.partialSolution.size() + reduction.VCNodes.size(), upperBound.size(), 0, bestPermutation);
         while (!bestMergedNodes.isEmpty()){
             int[] merge = bestMergedNodes.pop();
@@ -78,15 +78,21 @@ public class Branching {
 
     // c is the current solution size, k is the upper bound
     public int branch(int c, int k, int depth, LinkedList<Integer> lastPerm){
+        //if (depth == 7) System.out.println("#depth7 - 1 start");
         c += reduction.rollOutAllInitial(false);
+        //c += reduction.rollOutAll();
         hk.searchForAMatching();
         cc = new CliqueCover(G);
-        cc.cliqueCoverIterations(1,2, lastPerm);
+        cc.cliqueCoverIterations(2,2, lastPerm);
         lastPerm = cc.permutation;
         if (c + Math.max(hk.totalCycleLB, cc.lowerBound) >= k) {
             if (hk.totalCycleLB >= cc.lowerBound) hkCuts++;
             else ccCuts++;
-            progress += 1.0 / Math.pow(2.0, depth);
+            return k;
+        }
+        if (G.packingViolated){
+            G.packingViolated = false;
+            packingCuts++;
             return k;
         }
         if (G.totalEdges <= 0 || G.activeNodes <= 0){
@@ -97,7 +103,6 @@ public class Branching {
                 bestMergedNodes = (Stack<int[]>) reduction.mergedNodes.clone();
                 System.out.println("# current best: " + upperBound.size());
             }
-            progress += 1.0 / Math.pow(2.0, depth);
             return c;
         }
         Node v;
@@ -113,13 +118,22 @@ public class Branching {
         LinkedList<Node> mirrors = new LinkedList<>();
         G.removeNode(v);
         solution.push(v);
+        v.inVC = true;
         LinkedList<Node> ll = new LinkedList<>();
         ll.add(v);
-        if (!mirrors.isEmpty()) for (Node m : mirrors){
-            G.removeNode(m);
-            ll.add(m);
-            solution.push(m);
+        Stack<Packing> packingList = new Stack<>();
+        if (!mirrors.isEmpty()){
+            for (Node m : mirrors){
+                G.removeNode(m);
+                ll.add(m);
+                solution.push(m);
+                m.inVC = true;
+                for (Packing q : m.affectedConstraints) q.updateVC();
+            }
+            for (Node m : mirrors) packingList.push(new Packing(m, G, reduction));
         }
+        for (Packing q : v.affectedConstraints) q.updateVC();
+        packingList.push(new Packing(v, G, reduction));
         hk.updateDeleteNodes(ll);
         k = branch(c + 1 + mirrors.size(), k, depth + 1, lastPerm); //the returned cover
         if(reduction.removedNodes != null && !reduction.removedNodes.isEmpty()){
@@ -130,7 +144,10 @@ public class Branching {
         for (Node m : ll){
             G.reeaddNode(m);
             solution.pop();
+            m.inVC = false;
+            for (Packing q : m.affectedConstraints) q.redoVC();
         }
+        while (!packingList.empty()) packingList.pop().destroy();
         hk.updateAddNodes(ll);
         //Branch for deleting all neighbors
         LinkedList<Node> neighbours = new LinkedList<>();
@@ -140,19 +157,30 @@ public class Branching {
                 neighbours.add(toDelete);
                 G.removeNode(toDelete);
                 solution.push(toDelete);
+                toDelete.inVC = true;
             }
         }
         hk.updateDeleteNodes(neighbours);
+        HashSet<Integer> hs = new HashSet<>();
+        for (int n : v.neighbours) hs.add(n);
+        hs.add(v.id);
+        for (Node n : neighbours) {
+            packingList.push(new Packing(n, hs, G, reduction));
+            for (Packing q : n.affectedConstraints) q.updateVC();
+        }
         k = branch(c + neighbours.size(), k, depth + 1, lastPerm); //the returned cover
         if(reduction.removedNodes != null && !reduction.removedNodes.isEmpty()){
             reduction.revertReduction();
         }
         recursiveSteps++;
         Collections.reverse(neighbours);
-        for (Node u : neighbours) {
-            G.reeaddNode(u);
+        for (Node n : neighbours) {
+            G.reeaddNode(n);
             solution.pop();
+            n.inVC = false;
+            for (Packing q : n.affectedConstraints) q.redoVC();
         }
+        while (!packingList.empty()) packingList.pop().destroy();
         hk.updateAddNodes(neighbours);
         return k;
     }
