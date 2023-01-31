@@ -21,7 +21,7 @@ public class CliqueCover {
     public int cliqueCoverIterations(int k, int reerun, LinkedList<Integer> oldPermutation) {
         if (oldPermutation == null){
             permutation = new LinkedList<>();
-            for (int i = 0; i < G.nodeArray.length; i++) {
+            for (int i = 0; i < G.permutation.length; i++) {
                 permutation.add(i);
             }
             Collections.shuffle(permutation);
@@ -36,7 +36,7 @@ public class CliqueCover {
             for (int j = 0; j < G.nodeArray.length; j++) {
                 G.nodeArray[j].color = -1;
             }
-            permutation = cliqueCover();
+            permutation = cliqueCoverNew();
             k--;
         }
         return lowerBound;
@@ -81,7 +81,7 @@ public class CliqueCover {
 
         }
         LinkedList<Integer> perm = new LinkedList<>();
-        //shuffleArray(colorclasses);
+        shuffleArray(colorclasses);
         for (LinkedList<Integer> color: colorclasses) {
             if (color == null) break;
             perm.addAll(color);
@@ -97,6 +97,117 @@ public class CliqueCover {
         //System.out.println("the lower bound is " + lowerBound);
         //System.out.println("the first free color is " + FirstFreeColor);
         return perm;
+    }
+
+    private LinkedList<Integer> cliqueCoverNew(){
+        for (int i: permutation) {//forall active nodes in permutation
+            Node myNode = G.nodeArray[i];
+            if (!myNode.active) continue;
+            //for all neighbors that are active and colored decrement that color
+            int remember = -1;
+            boolean createNewClass = true;
+            for (int neighbourInfo: myNode.neighbours) {
+                Node neighbour = G.nodeArray[neighbourInfo];
+                if (!neighbour.active || neighbour.color == -1) continue;
+                colorcounts[neighbour.color]--;
+            }
+            int bestColorSize = 0;
+            int bestColor = -1;
+            for (int j = 0; j < FirstFreeColor; j++) {
+                if (colorcounts[j] == 0) {
+                    if (bestColorSize < colorclasses[j].size()) {
+                        bestColor = j;
+                        bestColorSize = colorclasses[bestColor].size();
+                    }
+                }
+            }
+            if (bestColor > -1){
+                colorclasses[bestColor].add(myNode.id);
+                myNode.color = bestColor;
+                colorcounts[bestColor]++;
+            }
+
+            for (int neighbourInfo : myNode.neighbours){
+                Node neighbour = G.nodeArray[neighbourInfo];
+                if (!neighbour.active || neighbour.color==-1) continue;
+                colorcounts[neighbour.color] ++;
+            }
+            if (bestColor == -1) {
+                LinkedList<Integer> ll = new LinkedList<>();
+                ll.add(myNode.id);
+                myNode.color = FirstFreeColor;
+                colorclasses[FirstFreeColor] = ll;
+                colorcounts[FirstFreeColor] = 1;
+                FirstFreeColor++;
+            }
+        }
+        improveSolution();
+        LinkedList<Integer> perm = new LinkedList<>();
+        shuffleArray(colorclasses);
+        for (LinkedList<Integer> color: colorclasses) {
+            if (color == null) break;
+            perm.addAll(color);
+        }
+        int newlowerBound = G.activeNodes - FirstFreeColor;
+        if (newlowerBound <= lowerBound){
+            reerun --;
+        }
+        else {
+            lowerBound = newlowerBound;
+        }
+        Collections.reverse(perm);
+        //System.out.println("the lower bound is " + lowerBound);
+        //System.out.println("the first free color is " + FirstFreeColor);
+        return perm;
+    }
+
+    public void improveSolution(){
+        for (int l = 0; l < FirstFreeColor; l++) {
+            LinkedList<Integer> color = colorclasses[l];
+            if (color.size() < 3){
+                int i = 0;
+                for (int nodeID: color) {
+                    Node myNode = G.nodeArray[nodeID];
+                    int orignalColor = myNode.color;
+                    for (int neighbourInfo: myNode.neighbours) {
+                        Node neighbour = G.nodeArray[neighbourInfo];
+                        if (!neighbour.active || neighbour.color == -1) continue;
+                        colorcounts[neighbour.color]--;
+                    }
+                    int bestColorSize = 0;
+                    int bestColor = -1;
+                    for (int j = 0; j < FirstFreeColor; j++) {
+                        if (colorcounts[j] == 0 && j != orignalColor) {
+                            if (bestColorSize < colorclasses[j].size()) {
+                                bestColor = j;
+                                bestColorSize = colorclasses[bestColor].size();
+                            }
+                        }
+                    }
+                    if (bestColor != -1){
+                        colorcounts[orignalColor]--;
+                        colorclasses[orignalColor].remove(i); //this is in O(2)
+                        colorclasses[bestColor].add(myNode.id);
+                        myNode.color = bestColor;
+                        colorcounts[bestColor]++;
+                    }
+                    for (int neighbourInfo : myNode.neighbours){
+                        Node neighbour = G.nodeArray[neighbourInfo];
+                        if (!neighbour.active || neighbour.color==-1) continue;
+                        colorcounts[neighbour.color] ++;
+                    }
+                    if (color.isEmpty()){
+                        //System.out.println("# we actually removed a color!!!!!!!!");
+                        colorclasses[orignalColor] = colorclasses[--FirstFreeColor];
+                        colorcounts[orignalColor] = colorcounts[FirstFreeColor];
+                        colorcounts[FirstFreeColor] = 0;
+                        colorclasses[FirstFreeColor].clear();
+                    }
+                    i++;
+                }
+
+            }
+        }
     }
     private void shuffleArray(LinkedList<Integer>[] ar)
     {
