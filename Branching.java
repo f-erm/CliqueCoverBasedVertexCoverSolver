@@ -34,14 +34,19 @@ public class Branching {
             return solution;
         }
         else reduction.revertReduction();
-        //Graph OldG = G;//Fuer kleineren Graphen
-        //G = G.reduceGraph();//fuer kleineren Graphen
-        InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime());
         reduction.rollOutAllInitial(true);
+        //Fuer kleineren Graphen
+        Graph OldG = G;
+        G = G.reduceGraph();
+        HopcroftKarp oldHK = hk;
+        Reduction oldReduction = reduction;
+        hk = new HopcroftKarp(G);
+        reduction = new Reduction(G, hk);
+        //fuer kleineren Graphen Ende
+        InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime());
         upperBound = initialSolution.vc(true);
         cc = new CliqueCover(G);
         solution = new Stack<>();
-        solution.addAll(G.partialSolution);
         bestMergedNodes = new Stack<>();
         cc.cliqueCoverIterations(10, 5, null);
         hk.searchForAMatching();
@@ -59,7 +64,7 @@ public class Branching {
         System.out.println("# upper bound: " + upperBound.size());
         int lb = Math.max(hk.totalCycleLB, bestLowerBound);
         System.out.println("# lower bound: " + (lb + reduction.VCNodes.size() + G.partialSolution.size()));
-        if (lb == upperBound.size()) return upperBound;
+        if (lb == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
         int solSize = branch(G.partialSolution.size() + reduction.VCNodes.size(), upperBound.size(), 0, bestPermutation);
         while (!bestMergedNodes.isEmpty()){
             int[] merge = bestMergedNodes.pop();
@@ -68,8 +73,7 @@ public class Branching {
                 upperBound.remove(G.nodeArray[merge[2]]);
             }
         }
-        return upperBound;
-        //return returnModified(upperBound, OldG, G);//Fuer kleineren Graphen
+        return returnModified(upperBound, OldG, G, oldReduction);//Fuer kleineren Graphen
     }
 
     // c is the current solution size, k is the upper bound
@@ -187,12 +191,24 @@ public class Branching {
         return mirrors;
     }
 
-    LinkedList<Node> returnModified(LinkedList<Node> vc, Graph oldG, Graph newG){
+    LinkedList<Node> returnModified(LinkedList<Node> vc, Graph oldG, Graph newG, Reduction oldRed){
         //substitutes the fake nodes of newG obtained by reducing for the real nodes of oldG
+        //vc.addAll(G.partialSolution);return vc //auskommentieren um ohne kleineren Graphen zu testen
         LinkedList<Node> r = new LinkedList<>();
         for (Node n : vc){
             r.add(oldG.nodeArray[newG.translationNewToOld[n.id]]);
         }
+        r.addAll(oldRed.VCNodes);
+        //entmerge gemergete Knoten
+        bestMergedNodes =oldRed.mergedNodes;
+        while (!bestMergedNodes.isEmpty()){
+            int[] merge = bestMergedNodes.pop();
+            if (r.contains(oldG.nodeArray[merge[0]])){
+                r.add(oldG.nodeArray[merge[1]]);
+                r.remove(oldG.nodeArray[merge[2]]);
+            }
+        }
+        r.addAll(oldG.partialSolution);
         return r;
     }
 }

@@ -167,7 +167,7 @@ private int findInArray(int[] array, int el){
     public Graph reduceGraph(){
         //setup new Graph
         Graph G = new Graph();
-        G.partialSolution = this.partialSolution;
+        G.partialSolution = new LinkedList<>();//be careful!
         G.nodeArray = new Node[this.activeNodes];
         G.activeNodes = this.activeNodes;
         int[] translationNewToOld = new int[this.activeNodes];//simple array is sufficient for this direction
@@ -200,8 +200,8 @@ private int findInArray(int[] array, int el){
                 }
             }
         }
-        //New Graph contains its own translation
         G.totalEdges = totalEdgesNew / 2;
+        //New Graph contains its own translation
         G.translationNewToOld = translationNewToOld;
         G.translationOldToNew = translationOldToNew;
         //Uebersetzung permutation, posinpermutaion und borderIndice. Momentan einfach aus Parser kopiert. Wahrscheinlich effizienter moeglich.
