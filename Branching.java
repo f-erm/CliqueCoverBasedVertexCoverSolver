@@ -1,4 +1,5 @@
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Branching {
     Graph G;
@@ -48,24 +49,71 @@ public class Branching {
         cc = new CliqueCover(G);
         solution = new Stack<>();
         bestMergedNodes = new Stack<>();
-        cc.cliqueCoverIterations(10, 5, null);
-        hk.searchForAMatching();
+        cc.cliqueCoverIterations(10, 5, null, 0);
+        hk.searchForAMatchingNew();
         LinkedList<Integer> bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
         long time = System.nanoTime();
-        for (int i = 0; i < G.activeNodes * 20 && (System.nanoTime() - time)/1024 < 10000000; i++){
-            cc.cliqueCoverIterations(10, 5, null);
+        for (int i = 0; i < G.activeNodes * 200 && (System.nanoTime() - time)/1024 < 10000000; i++){
+            if (i % 2 == 1){
+                int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
+                bestPermutation.remove((Integer) rand);
+                bestPermutation.add(rand);
+                cc.cliqueCoverIterations(10, 5, bestPermutation, bestLowerBound);
+                if (cc.lowerBound < bestLowerBound){
+                    int a =  bestPermutation.removeLast();
+                    bestPermutation.add(rand, a);
+                }
+            }
+            else cc.cliqueCoverIterations(10, 5, null, bestLowerBound);
             if (cc.lowerBound > bestLowerBound){
                 bestLowerBound = cc.lowerBound;
                 bestPermutation = cc.permutation;
             }
         }
-        System.out.println("# Clique Cover Quality: " + bestLowerBound);
-        System.out.println("# upper bound: " + upperBound.size());
+        System.out.println("# upper bound: " + (upperBound.size() + oldReduction.VCNodes.size()));
         firstLowerBound = Math.max(hk.totalCycleLB, bestLowerBound);
-        System.out.println("# lower bound: " + (firstLowerBound + reduction.VCNodes.size() + G.partialSolution.size()));
+        System.out.println("# lower bound: " + (firstLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
         if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
-        int solSize = branch(G.partialSolution.size() + reduction.VCNodes.size(), upperBound.size(), 0, bestPermutation);
+        if (upperBound.size() - firstLowerBound < 3){ //we are really close, try to get even better bounds
+            for (int i = 0; i < 3; i++) {//try to improve upper bound
+                InitialSolution is = new InitialSolution((Graph) G.clone(), System.nanoTime());
+                LinkedList<Node> newUpperBound = is.vc(true);
+                if (newUpperBound.size() < upperBound.size()){
+                    upperBound = newUpperBound;
+                    System.out.println("# upper bound - try better: " + (upperBound.size() + oldReduction.VCNodes.size()));
+                    if (upperBound.size() == firstLowerBound) return returnModified(upperBound, OldG, G, oldReduction);
+                }
+            }
+            for (int i = 0; i < G.activeNodes * 20000 && (System.nanoTime() - time)/1024 < 50000000; i++){
+                if (i % 2 == 1){//try to improve lower bound
+                    int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
+                    bestPermutation.remove((Integer) rand);
+                    bestPermutation.add(rand);
+                    cc.cliqueCoverIterations(10, 5, bestPermutation, bestLowerBound);
+                    if (cc.lowerBound < bestLowerBound){
+                        int a =  bestPermutation.removeLast();
+                        bestPermutation.add(rand, a);
+                    }
+                }
+                else cc.cliqueCoverIterations(10, 5, null, bestLowerBound);
+                if (cc.lowerBound > bestLowerBound){
+                    bestLowerBound = cc.lowerBound;
+                    bestPermutation = cc.permutation;
+                    if (upperBound.size() - bestLowerBound == 1){
+                        System.out.println("# lower bound - try better (not perfect yet): " + (bestLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
+                        time = System.nanoTime();
+                        i = 0;
+                    }
+                    else break;
+                }
+            }
+            firstLowerBound = Math.max(hk.totalCycleLB, bestLowerBound);
+            System.out.println("# lower bound - try better: " + (firstLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
+            if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
+        }
+        recursiveSteps++;
+        branch(G.partialSolution.size() + reduction.VCNodes.size(), upperBound.size(), 0, bestPermutation);
         while (!bestMergedNodes.isEmpty()){
             int[] merge = bestMergedNodes.pop();
             if (upperBound.contains(G.nodeArray[merge[0]])){
@@ -81,13 +129,14 @@ public class Branching {
         //if (depth == 7) System.out.println("#depth7 - 1 start");
         c += reduction.rollOutAllInitial(false);
         //c += reduction.rollOutAll();
-        hk.searchForAMatching();
+        hk.searchForAMatching();//TODO watch out here - could be high running time
         cc = new CliqueCover(G);
-        cc.cliqueCoverIterations(2,2, lastPerm);
+        cc.cliqueCoverIterations(2,2, lastPerm, 0);
         lastPerm = cc.permutation;
         if (c + Math.max(hk.totalCycleLB, cc.lowerBound) >= k) {
             if (hk.totalCycleLB >= cc.lowerBound) hkCuts++;
             else ccCuts++;
+            G.packingViolated = false;
             return k;
         }
         if (G.packingViolated){
@@ -117,6 +166,7 @@ public class Branching {
         //branch for deleting the node
         LinkedList<Node> mirrors = new LinkedList<>();
         G.removeNode(v);
+        reduction.updatePackingOfMergedNodes(v, 0);
         solution.push(v);
         v.inVC = true;
         LinkedList<Node> ll = new LinkedList<>();
@@ -125,6 +175,7 @@ public class Branching {
         if (!mirrors.isEmpty()){
             for (Node m : mirrors){
                 G.removeNode(m);
+                reduction.updatePackingOfMergedNodes(m, 0);
                 ll.add(m);
                 solution.push(m);
                 m.inVC = true;
@@ -142,6 +193,7 @@ public class Branching {
         recursiveSteps++;
         Collections.reverse(ll);
         for (Node m : ll){
+            reduction.redoPackingOfMergedNodes(m, 0);
             G.reeaddNode(m);
             solution.pop();
             m.inVC = false;
@@ -156,6 +208,7 @@ public class Branching {
             if (toDelete.active){
                 neighbours.add(toDelete);
                 G.removeNode(toDelete);
+                reduction.updatePackingOfMergedNodes(toDelete, 0);
                 solution.push(toDelete);
                 toDelete.inVC = true;
             }
@@ -175,6 +228,7 @@ public class Branching {
         recursiveSteps++;
         Collections.reverse(neighbours);
         for (Node n : neighbours) {
+            reduction.redoPackingOfMergedNodes(n, 0);
             G.reeaddNode(n);
             solution.pop();
             n.inVC = false;
@@ -237,6 +291,7 @@ public class Branching {
             }
         }
         r.addAll(oldG.partialSolution);
+        G.packingViolated = false;
         return r;
     }
 }

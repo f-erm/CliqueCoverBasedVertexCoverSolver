@@ -52,21 +52,20 @@ public class Packing {
 
     public void updateVC(){
         if (--right < 1) G.packingViolated = true;
-        /*if (right < 2){ //packing reduction #1
+        if (right < 2){ //packing reduction #1
             for (int n : affectedNodes) if (G.nodeArray[n].active){
-                for (int m : G.nodeArray[n].neighbours) if (G.nodeArray[m].active){
-                    reduction.removeVCNodes(G.nodeArray[m]);
-                }
-                reduction.removeUselessNodes(G.nodeArray[n]);
+                reduction.packingReductions.push(n);
                 break;
             }
-        }*/
+        }
     }
     public void redoVC(){
         right++;
     }
 
     public void destroy(){
-        for (int n : affectedNodes) G.nodeArray[n].affectedConstraints.removeLast();
+        for (int n : affectedNodes) {
+            G.nodeArray[n].affectedConstraints.removeLast();
+        }
     }
 }

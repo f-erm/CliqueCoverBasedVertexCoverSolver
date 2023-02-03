@@ -176,7 +176,7 @@ public class InitialSolution {
         vc.clear();
         for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
         for (Node n : G.nodeArray) n.neighbours = neighbourArrays[n.id];
-        int procCount = 1;//Runtime.getRuntime().availableProcessors();
+        int procCount = Runtime.getRuntime().availableProcessors();
         ThreadPoolExecutor exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(procCount);//create threadpool based on available cores.
         Future<LinkedList<Node>>[] allResults = new Future[procCount];
         for (int i = 0; i < allResults.length; i++){

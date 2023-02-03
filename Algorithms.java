@@ -35,12 +35,12 @@ public class Algorithms {
         int l = reduction.rollOutAllInitial(true);
         hk.searchForAMatching();
         cc = new CliqueCover(G);
-        cc.cliqueCoverIterations(10, 5, null);
+        cc.cliqueCoverIterations(10, 5, null, 0);
         bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
         long time = System.nanoTime();
         for (int i = 0; i < G.activeNodes * 20 && (System.nanoTime() - time)/1024 < 10000000; i++){
-            cc.cliqueCoverIterations(10, 5, null);
+            cc.cliqueCoverIterations(10, 5, null, 0);
             if (cc.lowerBound > bestLowerBound){
                 bestLowerBound = cc.lowerBound;
                 bestPermutation = cc.permutation;
@@ -114,7 +114,7 @@ public class Algorithms {
         time = System.nanoTime();
         if (doCliqueCover && branchedOnNeighbours) {
             cc = new CliqueCover(G);
-            if (k < cc.cliqueCoverIterations(1, 2, lastPerm)) {
+            if (k < cc.cliqueCoverIterations(1, 2, lastPerm, 0)) {
                 totalBranchCutsCC++;
                 //totalTimeCC += System.nanoTime() - time;
                 return null;

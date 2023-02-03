@@ -20,7 +20,7 @@ public class HeuristicWorker implements Callable {
         LinkedList<Node> vc = new LinkedList<>();
         for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
         HeuristicVC heuristicVC = new HeuristicVC(G, startTime);
-        while ((System.nanoTime() - startTime)/1024 < heuristicVC.TIME_LIMIT && cnt < 30) {
+        while ((System.nanoTime() - startTime)/1024 < heuristicVC.TIME_LIMIT) {
             try{
             LinkedList<Node> newVC = heuristicVC.metaheuristic(vc);
             if (newVC.size() < vc.size()) {

@@ -9,9 +9,8 @@ public class Node implements Comparable<Node>, Cloneable{
     int activeNeighbours;
     int color;
     LinkedList<Packing> affectedConstraints = new LinkedList<>();
-    //the next attributes are necessary to find the strong connected components
-
     boolean inVC;
+    LinkedList<int[]> mergeInfo = new LinkedList<>();
 
     /**
      * translates an old node to a new node.

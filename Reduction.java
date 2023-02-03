@@ -7,6 +7,7 @@ public class Reduction {
     Stack<int[]> mergedNodes;
     Stack<int[]> removedNodes;
     Stack<Integer> neighbourPosStack;
+    Stack<Integer> packingReductions = new Stack<>();
     Graph G;
     HopcroftKarp hk;
     long deg1Time = 0;
@@ -85,6 +86,7 @@ public class Reduction {
             removeDegreeXInitial();
             if (oldN != VCNodes.size()) again = true;
         }
+        doPackingReductions();
         return VCNodes.size() - oldK;
     }
 
@@ -334,6 +336,7 @@ public class Reduction {
                     if (G.nodeArray[first.id].activeNeighbours == 1) deg1.offer(first.id);
                     if (G.nodeArray[first.id].activeNeighbours == 2) deg2.offer(first.id);
                     mergedNodes.push(new int[]{first.id, second.id, node.id});
+                    first.mergeInfo.add(new int[]{second.id, node.id});
                 } else { // case v,w \in E
                     removeUselessNodes(node);
                     removeVCNodes(first);
@@ -421,6 +424,7 @@ public class Reduction {
                         if (G.nodeArray[first.id].activeNeighbours == 1) deg1.offer(first.id);
                         if (G.nodeArray[first.id].activeNeighbours == 2) deg2.offer(first.id);
                         mergedNodes.push(new int[]{first.id, second.id, node.id});
+                        first.mergeInfo.add(new int[]{second.id, node.id});
                     } else { // case v,w \in E
                         removeUselessNodes(node);
                         removeVCNodes(first);
@@ -532,12 +536,14 @@ private void removeDegreeXHeuristic(InitialSolution insol){
             Node node = G.nodeArray[action[1]];
             switch (action[0]) {
                 case 1: // useless Nodes
+                    redoPackingOfMergedNodes(node, 1);
                     G.reeaddNode(node);
                     LinkedList<Node> a = new LinkedList<>();
                     a.add(node);
                     if (hk != null) hk.updateAddNodes(a);
                     break;
                 case 2: //useful Nodes
+                    redoPackingOfMergedNodes(node, 0);
                     if (action.length == 2) for (Packing p : node.affectedConstraints) p.redoVC();
                     node.inVC = false;
                     G.reeaddNode(node);
@@ -547,6 +553,7 @@ private void removeDegreeXHeuristic(InitialSolution insol){
                     if (hk != null) hk.updateAddNodes(b);
                     break;
                 case 3: //merged Nodes :(
+                    node.mergeInfo.removeLast();
                     int[] newArray = new int[node.neighbours.length - action[3]];
                     int[] newPositionArray = new int[newArray.length];
                     System.arraycopy(node.neighbours, 0, newArray, 0, newArray.length);
@@ -624,6 +631,7 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         if(hk != null){
             hk.updateDeleteNodes(a);
         }
+        updatePackingOfMergedNodes(node, 1);
     }
     private void removeUselessNodesWithoutDegreeReducing(Node node){
         removedNodes.push(new int[]{1, node.id});
@@ -648,6 +656,18 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         }
         node.inVC = true;
         for (Packing p : node.affectedConstraints) p.updateVC();
+        updatePackingOfMergedNodes(node, 0);
+    }
+    private void doPackingReductions(){
+        while (!packingReductions.isEmpty()){
+            Node n = G.nodeArray[packingReductions.pop()];
+            if (n.active){
+                for (int m : n.neighbours) if (G.nodeArray[m].active){
+                    removeVCNodes(G.nodeArray[m]);
+                }
+                removeUselessNodes(n);
+            }
+        }
     }
 
     /**
@@ -832,7 +852,21 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         }
         return changed;
     }
+    public void updatePackingOfMergedNodes(Node node, int type) {
+        for (int[] merge : node.mergeInfo) {
+            for (Packing p : G.nodeArray[merge[type]].affectedConstraints) p.updateVC();
+            updatePackingOfMergedNodes(G.nodeArray[merge[type]], 0);
+            updatePackingOfMergedNodes(G.nodeArray[merge[1 - type]], 1);
+        }
+    }
+    public void redoPackingOfMergedNodes(Node node, int type){
+        for (int[] merge : node.mergeInfo) {
+            for (Packing p : G.nodeArray[merge[type]].affectedConstraints) p.redoVC();
+            redoPackingOfMergedNodes(G.nodeArray[merge[type]], 0);
+            redoPackingOfMergedNodes(G.nodeArray[merge[1 - type]], 1);
+        }
 
+}
 }
 
 

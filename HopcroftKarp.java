@@ -1,6 +1,5 @@
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Stack;
+import java.util.*;
+
 public class HopcroftKarp implements Cloneable {
     Graph B; //bipartite graph
     int totalCycleLB;
@@ -261,9 +260,10 @@ public class HopcroftKarp implements Cloneable {
                 }
             }
         }
-        boolean[] inCycle = new boolean[size];
-        int[] cycleCover = new int[size];
+        boolean[] inCycle = new boolean[size];//cycle cover lower bound, similar to Akiba/Iwata
+        int[] cycle = new int[size];
         int[] base = new int[size];
+        Arrays.fill(base, size);
         int[] pos = new int[size];
         int cyclCnt = 0;
         totalCycleLB = 0;
@@ -274,7 +274,7 @@ public class HopcroftKarp implements Cloneable {
                 int partner = pair[i];
                 inCycle[i] = true;
                 base[i] = i;
-                cycleCover[0] = i;
+                cycle[0] = i;
                 pos[cyclCnt++] = i;
                 while (partner != i + size){
                     if (partner == nil){
@@ -287,14 +287,14 @@ public class HopcroftKarp implements Cloneable {
                     }
                     inCycle[partner - size] = true;
                     base[partner - size] = i;
-                    cycleCover[count++] = partner - size;
-                    pos[cyclCnt++] = partner - size;
+                    cycle[count++] = partner - size;
+                    pos[partner - size] = count;
                     partner = pair[partner - size];
                     cycleLB++;
                 }
                 boolean clique = true;
                 for (int j = 0; j < count; j++) {
-                    Node v = G.nodeArray[cycleCover[j]];
+                    Node v = G.nodeArray[cycle[j]];
                     int num = 0;
                     for (int u : v.neighbours) if (G.nodeArray[u].active && base[u] == base[v.id]) num++;
                     if (num != count - 1) {
@@ -306,20 +306,42 @@ public class HopcroftKarp implements Cloneable {
                     totalCycleLB += count - 1;
                 }
                 else {
-                    /*while (count >= 6){
+                    int[] S2 = new int[size];
+                    while (count >= 6) { //TODO finish cycle bound
                         HashSet<Integer> isNeighbour = new HashSet<>();
-                        for (int j = 0; j < count; j++){
-                            for (int n : G.nodeArray[cycleCover[j]].neighbours) if (G.nodeArray[n].active && base[n] == base[cycleCover[j]]) isNeighbour.add(n);
-                            int second = cycleCover[(j+1) % count];
-                            for (int n : G.nodeArray[second].neighbours) if (G.nodeArray[n].active && base[n] == base[second] && isNeighbour.contains(cycleCover[(pos[n] + 1) % count])){
-                                int cycleDiff = (pos[n] - pos[second] + count) % count;
-                                if (cycleDiff % 2 != 0){
-                                    totalCycleLB++;
+                        int minSize = count, s = 0, t = count;
+                        for (int j = 0; j < count; j++) {
+                            int v = cycle[j];
+                            isNeighbour.clear();
+                            for (int u : G.nodeArray[v].neighbours) if (G.nodeArray[u].active && base[u] == base[v]) {
+                                isNeighbour.add(u);
+                            }
+                            v = cycle[(j + 1) % count];
+                            for (int u : G.nodeArray[v].neighbours) if (G.nodeArray[u].active && base[u] == base[v]) {
+                                if (isNeighbour.contains(cycle[(pos[u] + 1) % count])) {
+                                    int size2 = (pos[u] - j + count) % count;
+                                    if (minSize > size2 && size2 % 2 != 0) {
+                                        minSize = size2;
+                                        s = (j + 1) % count;
+                                        t = (pos[u] + 1) % count;
+                                    }
                                 }
                             }
                         }
-                    }*/
-                    totalCycleLB += (cycleLB + 1)/ 2;
+                        if (minSize == count) break;
+                        int p = 0;
+                        for (int j = t; j != s; j = (j + 1) % count) {
+                            S2[p++] = cycle[j];
+                        }
+                        for (int j = s; j != t; j = (j + 1) % count) {
+                            base[cycle[j]] = size;
+                        }
+                        int[] S3 = cycle; cycle = S2; S2 = S3;
+                        count -= minSize;
+                        totalCycleLB += (minSize + 1) / 2;
+                        for (int j = 0; j < count; j++) pos[cycle[j]] = j;
+                    }
+                    totalCycleLB += (count + 1) / 2;
                 }
             }
         }

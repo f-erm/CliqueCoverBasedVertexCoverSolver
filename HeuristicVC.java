@@ -3,7 +3,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class HeuristicVC {
     Graph G;
-    final int TIME_LIMIT = 5000000;
+    final int TIME_LIMIT = 10000000;
     Node[] lsPermutation;
     int[] posInLsPermutation;
     boolean[] isCandidate;
@@ -20,7 +20,7 @@ public class HeuristicVC {
         int bestSolutionSize = vcBorder;
         int lastTimeGotWorse = 0;
         int notImprovedFor = 0;
-        while ((System.nanoTime() - startTime)/1024 < TIME_LIMIT && notImprovedFor < 10000000){
+        while ((System.nanoTime() - startTime)/1024 < TIME_LIMIT && notImprovedFor < 3000000){
             int lastBorder = vcBorder;
             if (vcBorder == 0) return vc;//perturb the solution
             int rand = ThreadLocalRandom.current().nextInt(0, vcBorder);
@@ -62,6 +62,7 @@ public class HeuristicVC {
             if (vcBorder < bestSolutionSize) {
                 bestSolution = new LinkedList<>(Arrays.asList(lsPermutation).subList(0, vcBorder));
                 bestSolutionSize = vcBorder;
+                notImprovedFor = 0;
             }
             else notImprovedFor++;
         }

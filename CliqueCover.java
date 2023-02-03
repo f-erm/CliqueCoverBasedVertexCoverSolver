@@ -1,6 +1,4 @@
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class CliqueCover {
@@ -9,6 +7,7 @@ public class CliqueCover {
     int[] colorcounts;
     int FirstFreeColor = 0;//keep track of first availible spot in colorclasses
     int lowerBound = 0;
+    int oldLowerBound = 0;
     Graph G;
     LinkedList<Integer> permutation;
     int reerun;
@@ -18,7 +17,9 @@ public class CliqueCover {
         lowerBound = 0;
     }
 
-    public int cliqueCoverIterations(int k, int reerun, LinkedList<Integer> oldPermutation) {
+    public int cliqueCoverIterations(int k, int reerun, LinkedList<Integer> oldPermutation, int bestLowerBound) {
+        oldLowerBound = bestLowerBound;
+        lowerBound = 0;
         if (oldPermutation == null){
             permutation = new LinkedList<>();
             for (int i = 0; i < G.permutation.length; i++) {
@@ -159,15 +160,15 @@ public class CliqueCover {
         return perm;
     }
 
-    public void improveSolution(){
+    public void improveSolution() {
         for (int l = 0; l < FirstFreeColor; l++) {
             LinkedList<Integer> color = colorclasses[l];
-            if (color.size() < 5){
-                LinkedList<Integer> toRemove = new LinkedList<>();
-                for (int nodeID: color) {
+            if (color.size() < 5) {
+                LinkedList<Integer> colorCopy = (LinkedList<Integer>) color.clone();
+                for (int nodeID : colorCopy) {
                     Node myNode = G.nodeArray[nodeID];
                     int originalColor = myNode.color;
-                    for (int neighbourInfo: myNode.neighbours) {
+                    for (int neighbourInfo : myNode.neighbours) {
                         Node neighbour = G.nodeArray[neighbourInfo];
                         if (!neighbour.active || neighbour.color == -1) continue;
                         colorcounts[neighbour.color]--;
@@ -182,29 +183,26 @@ public class CliqueCover {
                             }
                         }
                     }
-                    if (bestColor != -1){
+                    for (int neighbourInfo : myNode.neighbours) {
+                        Node neighbour = G.nodeArray[neighbourInfo];
+                        if (!neighbour.active || neighbour.color == -1) continue;
+                        colorcounts[neighbour.color]++;
+                    }
+                    if (bestColor != -1) {
                         colorcounts[originalColor]--;
-                        toRemove.add(myNode.id);
+                        color.remove((Integer) myNode.id);
                         colorclasses[bestColor].add(myNode.id);
                         myNode.color = bestColor;
                         colorcounts[bestColor]++;
                     }
-                    for (int neighbourInfo : myNode.neighbours){
-                        Node neighbour = G.nodeArray[neighbourInfo];
-                        if (!neighbour.active || neighbour.color==-1) continue;
-                        colorcounts[neighbour.color] ++;
-                    }
-                    if (colorcounts[l] == 0){
-                        //System.out.println("# we actually removed a color!!!!!!!!");
-                        colorclasses[originalColor] = colorclasses[--FirstFreeColor];
-                        colorcounts[originalColor] = colorcounts[FirstFreeColor];
-                        colorcounts[FirstFreeColor] = 0;
-                        colorclasses[FirstFreeColor] = new LinkedList<>();
-                        l--;
-                    }
                 }
-                for (int el : toRemove) {
-                    color.remove((Integer) el); // O(2)
+                if (colorcounts[l] == 0) {
+                    colorclasses[l] = colorclasses[--FirstFreeColor];
+                    colorcounts[l] = colorcounts[FirstFreeColor];
+                    colorcounts[FirstFreeColor] = 0;
+                    colorclasses[FirstFreeColor] = new LinkedList<>();
+                    for (int n : colorclasses[l]) G.nodeArray[n].color = l;
+                    l--;
                 }
             }
         }
