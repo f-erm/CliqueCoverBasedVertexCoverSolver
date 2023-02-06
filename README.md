@@ -1,10 +1,12 @@
 # DemAlgoIngenieurIstNichtsZuSchwieur
 
 
-Repo Für AlgEng 2022 an der TU Berlin.
+Repo Für AlgEng 2022/2023 an der TU Berlin.
 
-TODO: 
--Reductions ggf cutten
--dominiation ausprobieren
--Fehler bei LP suchen
--Isomorphismus probieren, ggf Nikita fragen wie sie das gemacht haben
+TODO (letzte Iteration): 
+-Clique Cover richtig herum versuchen aufzulösen
+-Clique Cover nur veränderte Cliquen untersuchen
+-Upper Bound verbessern (mehrere Knoten in der ILS rausnehmen)
+-Profiler
+-evtl. Reduktionsregeln (deg3, κ-unconfined)
+
