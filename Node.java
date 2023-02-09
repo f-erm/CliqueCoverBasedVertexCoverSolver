@@ -7,7 +7,6 @@ public class Node implements Comparable<Node>, Cloneable{
     int[] neighbourPositions;
     boolean active;
     int activeNeighbours;
-    int color;
     LinkedList<Packing> affectedConstraints = new LinkedList<>();
     boolean inVC;
     LinkedList<int[]> mergeInfo = new LinkedList<>();
@@ -56,7 +55,6 @@ public class Node implements Comparable<Node>, Cloneable{
         N.activeNeighbours = this.activeNeighbours;
         N.neighbours = this.neighbours.clone();
         N.neighbourPositions = this.neighbourPositions.clone();
-        N.color = this.color;
         return N;
 
     }

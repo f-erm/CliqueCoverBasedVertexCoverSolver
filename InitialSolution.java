@@ -3,6 +3,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class InitialSolution {
@@ -77,7 +78,7 @@ public class InitialSolution {
         }
         while (G.totalEdges > 0){
             //check if an exact reduction can be applied
-            if ((System.nanoTime() - startTime)/1024  < 30000000) reduction.rollOutAllHeuristic(false, this);
+            if ((System.nanoTime() - startTime)/1024  < 30000000 && highestDegree) reduction.rollOutAllHeuristic(false, this);
             if (G.totalEdges == 0){
                 return threadedLocalSearch(vc);
             }
@@ -92,30 +93,17 @@ public class InitialSolution {
                 counterOfInexactRed ++;
                 inexactRed ++;
             }
-            else {
-                int minDegree = Integer.MAX_VALUE;
-                Node minDegreeNode = null;
-                for (int id = 0; id < G.nodeArray.length; id++) {
-                    Node node = G.nodeArray[id];
-                    if (node.active && node.activeNeighbours < minDegree){
-                        minDegreeNode = node;
-                        minDegree = node.activeNeighbours;
-                    }
+            else { //TODO make this more efficeient
+                Node randomNode;
+                do {
+                    int rand = ThreadLocalRandom.current().nextInt(0, G.nodeArray.length);
+                    randomNode = G.nodeArray[rand];
                 }
-                if(minDegreeNode != null){
-                    for (int neighbourID: minDegreeNode.neighbours) {
-                        Node u = G.nodeArray[neighbourID];
-                        if(u.active){
-                            vc.add(u);
-                            G.removeNode(u);
-                        }
-                    }
-                    G.removeNode(minDegreeNode);
-                    counterOfInexactRed ++;
-                    inexactRed ++;
-                }
+                while (!randomNode.active);
+                vc.add(randomNode);
+                G.removeNode(randomNode);
+                reduceDegree(randomNode);
             }
-
         }
         return threadedLocalSearch(vc);
     }

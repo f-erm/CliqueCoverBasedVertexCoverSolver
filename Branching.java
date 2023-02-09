@@ -45,11 +45,12 @@ public class Branching {
         reduction = new Reduction(G, hk);
         //fuer kleineren Graphen Ende
         InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime());
-        upperBound = initialSolution.vc(true);
+        upperBound = initialSolution.vc(false);
         cc = new CliqueCover(G);
         solution = new Stack<>();
         bestMergedNodes = new Stack<>();
-        cc.cliqueCoverIterations(10, 5, null, 0);
+        cc.cliqueCoverIterations(10, 5, null, 5);
+
         hk.searchForAMatchingNew();
         LinkedList<Integer> bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
@@ -59,13 +60,13 @@ public class Branching {
                 int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
                 bestPermutation.remove((Integer) rand);
                 bestPermutation.add(rand);
-                cc.cliqueCoverIterations(10, 5, bestPermutation, bestLowerBound);
+                cc.cliqueCoverIterations(10, 5, bestPermutation, 5);
                 if (cc.lowerBound < bestLowerBound){
                     int a =  bestPermutation.removeLast();
                     bestPermutation.add(rand, a);
                 }
             }
-            else cc.cliqueCoverIterations(10, 5, null, bestLowerBound);
+            else cc.cliqueCoverIterations(10, 5, null, 5);
             if (cc.lowerBound > bestLowerBound){
                 bestLowerBound = cc.lowerBound;
                 bestPermutation = cc.permutation;
@@ -78,7 +79,7 @@ public class Branching {
         if (upperBound.size() - firstLowerBound < 3){ //we are really close, try to get even better bounds
             for (int i = 0; i < 3; i++) {//try to improve upper bound
                 InitialSolution is = new InitialSolution((Graph) G.clone(), System.nanoTime());
-                LinkedList<Node> newUpperBound = is.vc(true);
+                LinkedList<Node> newUpperBound = is.vc(false);
                 if (newUpperBound.size() < upperBound.size()){
                     upperBound = newUpperBound;
                     System.out.println("# upper bound - try better: " + (upperBound.size() + oldReduction.VCNodes.size()));
@@ -90,13 +91,13 @@ public class Branching {
                     int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
                     bestPermutation.remove((Integer) rand);
                     bestPermutation.add(rand);
-                    cc.cliqueCoverIterations(10, 5, bestPermutation, bestLowerBound);
+                    cc.cliqueCoverIterations(10, 5, bestPermutation, 5);
                     if (cc.lowerBound < bestLowerBound){
                         int a =  bestPermutation.removeLast();
                         bestPermutation.add(rand, a);
                     }
                 }
-                else cc.cliqueCoverIterations(10, 5, null, bestLowerBound);
+                else cc.cliqueCoverIterations(10, 5, null, 5);
                 if (cc.lowerBound > bestLowerBound){
                     bestLowerBound = cc.lowerBound;
                     bestPermutation = cc.permutation;
@@ -129,9 +130,9 @@ public class Branching {
         //if (depth == 7) System.out.println("#depth7 - 1 start");
         c += reduction.rollOutAllInitial(false);
         //c += reduction.rollOutAll();
-        hk.searchForAMatching();//TODO watch out here - could be high running time
-        cc = new CliqueCover(G);
-        cc.cliqueCoverIterations(2,2, lastPerm, 0);
+        hk.searchForAMatching();
+        //cc = new CliqueCover(G);
+        cc.cliqueCoverIterations(2,2, lastPerm, 4);
         lastPerm = cc.permutation;
         if (c + Math.max(hk.totalCycleLB, cc.lowerBound) >= k) {
             if (hk.totalCycleLB >= cc.lowerBound) hkCuts++;

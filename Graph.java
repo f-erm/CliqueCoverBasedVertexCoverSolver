@@ -175,7 +175,6 @@ private int findInArray(int[] array, int el){
         for (Node n : this.permutation){
             if (n.active){
                 Node newNode = new Node(n.name,i,n.activeNeighbours);
-                newNode.color = n.color;
                 newNode.activeNeighbours = n.activeNeighbours;
                 newNode.neighbourPositions = new int[n.activeNeighbours];
                 G.nodeArray[i] = newNode;
