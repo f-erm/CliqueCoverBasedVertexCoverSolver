@@ -34,8 +34,6 @@ public class Branching {
             solution.addAll(G.partialSolution);
             return solution;
         }
-        else reduction.revertReduction();
-        reduction.rollOutAllInitial(true);
         //Fuer kleineren Graphen
         Graph OldG = G;
         G = G.reduceGraph();
