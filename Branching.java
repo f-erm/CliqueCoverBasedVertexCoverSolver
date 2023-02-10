@@ -1,5 +1,9 @@
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+
 
 public class Branching {
     Graph G;
@@ -14,10 +18,13 @@ public class Branching {
     LinkedList<Node> upperBound;
     int recursiveSteps;
     int firstLowerBound;
+    int procCount;
+    ThreadPoolExecutor exec;
     public Branching(Graph G){
         this.G = G;
         recursiveSteps = 0;
         hk = new HopcroftKarp(G);
+        procCount = Runtime.getRuntime().availableProcessors();
     }
     public LinkedList<Node> solve(){
         reduction = new Reduction(G, hk);
@@ -112,7 +119,9 @@ public class Branching {
             if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
         }
         recursiveSteps++;
+        exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(procCount);//create threadpool based on available cores.
         branch(G.partialSolution.size() + reduction.VCNodes.size(), upperBound.size(), 0, bestPermutation);
+        exec.shutdownNow();
         while (!bestMergedNodes.isEmpty()){
             int[] merge = bestMergedNodes.pop();
             if (upperBound.contains(G.nodeArray[merge[0]])){
@@ -129,11 +138,30 @@ public class Branching {
         c += reduction.rollOutAllInitial(false);
         //c += reduction.rollOutAll();
         hk.searchForAMatching();
+        //thread the CliqueCover
+        //System.out.println("hier gehts los");
+        Future<Object[]>[] allResults = new Future[procCount];
+        for (int i = 0; i < allResults.length; i++){
+            if (i==0) allResults[i] = exec.submit(new CliqueWorker(G, lastPerm));
+            else allResults[i] = exec.submit(new CliqueWorker(G, null));
+        }
+        int bestLowerBound = 0;
+        try {
+            Object[] res = allResults[0].get();
+            lastPerm = (LinkedList<Integer>) res[0];
+            bestLowerBound = (Integer) res[1];
+            //System.out.println("bestLB" +bestLowerBound);
+            for (int i = 1; i < allResults.length; i++) {
+                res = allResults[i].get();
+                if ((Integer) res[1] > bestLowerBound){ bestLowerBound = (Integer) res[1];/*System.out.println("bestLB" +bestLowerBound);*/ lastPerm = (LinkedList<Integer>) res[0];}
+            }
+        }catch (Exception e){e.printStackTrace();}
+        //Rest of Programm
         //cc = new CliqueCover(G);
-        cc.cliqueCoverIterations(2,2, lastPerm, 4);
-        lastPerm = cc.permutation;
-        if (c + Math.max(hk.totalCycleLB, cc.lowerBound) >= k) {
-            if (hk.totalCycleLB >= cc.lowerBound) hkCuts++;
+        //cc.cliqueCoverIterations(2,2, lastPerm, 4);
+        //lastPerm = cc.permutation;
+        if (c + Math.max(hk.totalCycleLB, bestLowerBound) >= k) {
+            if (hk.totalCycleLB >= bestLowerBound) hkCuts++;
             else ccCuts++;
             G.packingViolated = false;
             return k;
