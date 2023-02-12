@@ -50,7 +50,7 @@ public class Branching {
         reduction = new Reduction(G, hk);
         //fuer kleineren Graphen Ende
         InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime());
-        upperBound = initialSolution.vc(false);
+        upperBound = initialSolution.vc(true);
         cc = new CliqueCover(G);
         solution = new Stack<>();
         bestMergedNodes = new Stack<>();
@@ -82,9 +82,9 @@ public class Branching {
         System.out.println("# lower bound: " + (firstLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
         if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
         if (upperBound.size() - firstLowerBound < 3){ //we are really close, try to get even better bounds
-            for (int i = 0; i < 3; i++) {//try to improve upper bound
+            for (int i = 0; i < 4; i++) {//try to improve upper bound
                 InitialSolution is = new InitialSolution((Graph) G.clone(), System.nanoTime());
-                LinkedList<Node> newUpperBound = is.vc(false);
+                LinkedList<Node> newUpperBound = is.vc(i % 2 == 0);
                 if (newUpperBound.size() < upperBound.size()){
                     upperBound = newUpperBound;
                     System.out.println("# upper bound - try better: " + (upperBound.size() + oldReduction.VCNodes.size()));

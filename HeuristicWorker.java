@@ -17,12 +17,13 @@ public class HeuristicWorker implements Callable {
     @Override
     public LinkedList<Node> call() {
         int cnt = 0;
-        LinkedList<Node> vc = new LinkedList<>();
-        for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
+        LinkedList<Node> oldvc = new LinkedList<>();
+        for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) oldvc.add(G.nodeArray[i]);
         HeuristicVC heuristicVC = new HeuristicVC(G, startTime);
+        LinkedList<Node> vc = oldvc;
         while ((System.nanoTime() - startTime)/1024 < heuristicVC.TIME_LIMIT) {
             try{
-            LinkedList<Node> newVC = heuristicVC.metaheuristic(vc);
+                LinkedList<Node> newVC = heuristicVC.metaheuristic((LinkedList<Node>) oldvc.clone());
             if (newVC.size() < vc.size()) {
                 vc = newVC;
                 cnt = 0;

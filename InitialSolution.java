@@ -1,13 +1,14 @@
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 
 public class InitialSolution {
     Graph G;
+    Queue<Node> randomPerm;
     Reduction reduction;
     Queue<Integer> reduceDegZeroQueue;
     Queue<Integer> reduceDegOneQueue;
@@ -43,6 +44,11 @@ public class InitialSolution {
      */
 
     public LinkedList<Node> vc(boolean highestDegree){
+        if (!highestDegree) {
+            LinkedList<Node> toShuffle = new LinkedList<>(Arrays.asList(G.nodeArray));
+            Collections.shuffle(toShuffle);
+            randomPerm = new LinkedList<>(toShuffle);
+        }
         LinkedList<Node>vc = new LinkedList<>();
         int sizeOfOldVC = reduction.VCNodes.size();
         counterOfInexactRed = 0;
@@ -78,7 +84,7 @@ public class InitialSolution {
         }
         while (G.totalEdges > 0){
             //check if an exact reduction can be applied
-            if ((System.nanoTime() - startTime)/1024  < 30000000 && highestDegree) reduction.rollOutAllHeuristic(false, this);
+            reduction.rollOutAllHeuristic(false, this);
             if (G.totalEdges == 0){
                 return threadedLocalSearch(vc);
             }
@@ -93,13 +99,11 @@ public class InitialSolution {
                 counterOfInexactRed ++;
                 inexactRed ++;
             }
-            else { //TODO make this more efficeient
+            else {
                 Node randomNode;
-                do {
-                    int rand = ThreadLocalRandom.current().nextInt(0, G.nodeArray.length);
-                    randomNode = G.nodeArray[rand];
-                }
-                while (!randomNode.active);
+                do{
+                    randomNode = randomPerm.poll();
+                } while (!randomNode.active);
                 vc.add(randomNode);
                 G.removeNode(randomNode);
                 reduceDegree(randomNode);
@@ -170,15 +174,6 @@ public class InitialSolution {
         for (int i = 0; i < allResults.length; i++){
             allResults[i] = exec.submit(new HeuristicWorker((Graph) G.clone(), startTime, inVC.clone()));
         }
-        /*HeuristicVC heuristicVC = new HeuristicVC(G, startTime);
-        while ((System.nanoTime() - startTime)/1024 < 55000000 && cnt < 30) {
-            LinkedList<Node> newVC = heuristicVC.metaheuristic(vc);
-            if (newVC.size() < vc.size()) {
-                vc = newVC;
-                cnt = 0;
-            }
-            else cnt++;
-        }*/
         try {
             vc = allResults[0].get();
             for (int i = 1; i < allResults.length; i++) {
