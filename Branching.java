@@ -1,7 +1,6 @@
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 
 
@@ -55,7 +54,6 @@ public class Branching {
         solution = new Stack<>();
         bestMergedNodes = new Stack<>();
         cc.cliqueCoverIterations(10, 5, null, 5);
-
         hk.searchForAMatchingNew();
         LinkedList<Integer> bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
@@ -134,38 +132,31 @@ public class Branching {
 
     // c is the current solution size, k is the upper bound
     public int branch(int c, int k, int depth, LinkedList<Integer> lastPerm){
-        //if (depth == 7) System.out.println("#depth7 - 1 start");
         c += reduction.rollOutAllInitial(false);
-        //c += reduction.rollOutAll();
         hk.searchForAMatching();
-        //thread the CliqueCover
-        //System.out.println("hier gehts los");
-        /*Future<Object[]>[] allResults = new Future[procCount];
-        for (int i = 0; i < allResults.length; i++){
-            if (i==0) allResults[i] = exec.submit(new CliqueWorker(G, lastPerm));
-            else allResults[i] = exec.submit(new CliqueWorker(G, lastPerm));
-        }
-        int bestLowerBound = 0;
-        try {
-            Object[] res = allResults[0].get();
-            lastPerm = (LinkedList<Integer>) res[0];
-            bestLowerBound = (Integer) res[1];
-            //System.out.println("bestLB" +bestLowerBound);
-            for (int i = 1; i < allResults.length; i++) {
-                res = allResults[i].get();
-                if ((Integer) res[1] > bestLowerBound){
-                    bestLowerBound = (Integer) res[1];
-                    //System.out.println("bestLB" +bestLowerBound);
-                    lastPerm = (LinkedList<Integer>) res[0];
+        cc.cliqueCoverIterations(2,2, lastPerm, 4);
+        int bestLowerBound = cc.lowerBound;
+        if (c + bestLowerBound > k - 2 && c + bestLowerBound < k) {
+            int bonus = 0;
+            if (depth < 10) {
+                bonus = 20 - depth;
+            }
+            if (cc.permutation.size() > 0) for (int i = 0; i < 5 + bonus; i++) {
+                int rand = ThreadLocalRandom.current().nextInt(cc.permutation.size());
+                cc.permutation.remove((Integer) rand);
+                cc.permutation.add(rand);
+                cc.cliqueCoverIterations(2, 2, cc.permutation, 5);
+                if (cc.lowerBound < bestLowerBound) {
+                    int a = cc.permutation.removeLast();
+                    cc.permutation.add(rand, a);
+                }
+                if (cc.lowerBound > bestLowerBound) {
+                    bestLowerBound = cc.lowerBound;
+                    if (c + bestLowerBound >= k) break;
                 }
             }
-        }catch (Exception e){e.printStackTrace();}*/
-        cc.cliqueCoverIterations(2, 2, lastPerm, 4);
-        int bestLowerBound = cc.lowerBound;
-        //Rest of Programm
-        //cc = new CliqueCover(G);
-        //cc.cliqueCoverIterations(2,2, lastPerm, 4);
-        //lastPerm = cc.permutation;
+        }
+        lastPerm = cc.permutation;
         if (c + Math.max(hk.totalCycleLB, bestLowerBound) >= k) {
             if (hk.totalCycleLB >= bestLowerBound) hkCuts++;
             else ccCuts++;
