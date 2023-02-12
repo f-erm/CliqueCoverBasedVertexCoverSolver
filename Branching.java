@@ -140,10 +140,10 @@ public class Branching {
         hk.searchForAMatching();
         //thread the CliqueCover
         //System.out.println("hier gehts los");
-        Future<Object[]>[] allResults = new Future[procCount];
+        /*Future<Object[]>[] allResults = new Future[procCount];
         for (int i = 0; i < allResults.length; i++){
             if (i==0) allResults[i] = exec.submit(new CliqueWorker(G, lastPerm));
-            else allResults[i] = exec.submit(new CliqueWorker(G, null));
+            else allResults[i] = exec.submit(new CliqueWorker(G, lastPerm));
         }
         int bestLowerBound = 0;
         try {
@@ -153,9 +153,15 @@ public class Branching {
             //System.out.println("bestLB" +bestLowerBound);
             for (int i = 1; i < allResults.length; i++) {
                 res = allResults[i].get();
-                if ((Integer) res[1] > bestLowerBound){ bestLowerBound = (Integer) res[1];/*System.out.println("bestLB" +bestLowerBound);*/ lastPerm = (LinkedList<Integer>) res[0];}
+                if ((Integer) res[1] > bestLowerBound){
+                    bestLowerBound = (Integer) res[1];
+                    //System.out.println("bestLB" +bestLowerBound);
+                    lastPerm = (LinkedList<Integer>) res[0];
+                }
             }
-        }catch (Exception e){e.printStackTrace();}
+        }catch (Exception e){e.printStackTrace();}*/
+        cc.cliqueCoverIterations(2, 2, lastPerm, 4);
+        int bestLowerBound = cc.lowerBound;
         //Rest of Programm
         //cc = new CliqueCover(G);
         //cc.cliqueCoverIterations(2,2, lastPerm, 4);

@@ -1,6 +1,6 @@
 import java.util.concurrent.Callable;
 import java.util.*;
-
+import java.util.concurrent.ThreadLocalRandom;
 
 
 public class CliqueWorker implements Callable {
@@ -9,7 +9,10 @@ public class CliqueWorker implements Callable {
 
     public CliqueWorker(Graph G, LinkedList<Integer> lastPerm){
         this.G = G;
-        this.lastPerm = lastPerm;
+        this.lastPerm = (LinkedList<Integer>) lastPerm.clone();
+        int rand = ThreadLocalRandom.current().nextInt(this.lastPerm.size());
+        this.lastPerm.remove((Integer) rand);
+        this.lastPerm.add(rand);
     }
 
     @Override

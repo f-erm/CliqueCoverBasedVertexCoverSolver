@@ -26,8 +26,8 @@ public class CliqueCover {
         tryKillCliqus = notResolveCliques;
         if (oldPermutation == null){
             permutation = new LinkedList<>();
-            for (int i = 0; i < G.permutation.length; i++) {
-                if (G.permutation[i].active) permutation.add(i);
+            for (int i = 0; i < G.nodeArray.length; i++) {
+                if (G.nodeArray[i].active) permutation.add(i);
             }
             Collections.shuffle(permutation);
         }
