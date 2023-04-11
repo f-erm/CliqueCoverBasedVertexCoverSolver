@@ -1,4 +1,5 @@
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -31,6 +32,14 @@ public class Graph implements Cloneable{
     }
     public Graph(boolean hi){
 
+    }
+
+    public void makeConsistent(){
+        HashSet<OldNode> neighbourList = new HashSet<>();
+        for (OldNode on : nodeHashMap.values()){
+            on.neighbors.removeIf(oldNode -> !neighbourList.add(oldNode));
+            neighbourList.clear();
+        }
     }
 
     /**

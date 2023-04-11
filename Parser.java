@@ -19,6 +19,7 @@ public class Parser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        g.makeConsistent();
         return createGraph(g);
     }
 
@@ -36,6 +37,7 @@ public class Parser {
 
             g.addEdge(nodes[0], nodes[1]);
         }
+        g.makeConsistent();
       return createGraph(g);
 
     }
