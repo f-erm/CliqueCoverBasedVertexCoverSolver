@@ -58,7 +58,7 @@ public class Branching {
         LinkedList<Integer> bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
         long time = System.nanoTime();
-        for (int i = 0; i < G.activeNodes * 200 && (System.nanoTime() - time)/1024 < 10000000; i++){
+        for (int i = 0; i < G.activeNodes * 200 && (System.nanoTime() - time)/1024 < 60000000; i++){
             if (i % 2 == 1){
                 int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
                 bestPermutation.remove((Integer) rand);

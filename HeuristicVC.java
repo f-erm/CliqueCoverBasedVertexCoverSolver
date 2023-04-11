@@ -3,7 +3,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class HeuristicVC {
     Graph G;
-    final int TIME_LIMIT = 10000000;
+    final int TIME_LIMIT = 300000000; // in mikrosecunden
     Node[] lsPermutation;
     int[] posInLsPermutation;
     boolean[] isCandidate;
