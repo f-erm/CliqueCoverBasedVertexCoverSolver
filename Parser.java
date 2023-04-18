@@ -11,6 +11,7 @@ public class Parser {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.contains("#")) line = line.substring(0,line.indexOf('#'));
+                if (line.contains("p")) line = line.substring(0,line.indexOf('p'));
                 if (line.trim().length() == 0) continue;
                 String[] nodes = line.split("\\s+");
 
@@ -32,6 +33,7 @@ public class Parser {
         while (scanner.hasNext()){
             line = scanner.nextLine();
             if (line.contains("#")) line = line.substring(0,line.indexOf('#'));
+            if (line.contains("p")) line = line.substring(0,line.indexOf('p'));
             if (line.trim().length() == 0) continue;
             String[] nodes = line.split("\\s+");
 
