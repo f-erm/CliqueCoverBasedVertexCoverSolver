@@ -5,12 +5,12 @@ public class CliqueCover {
 
     LinkedList<Integer>[] colorclasses;
     int[] colorcounts;
-    int FirstFreeColor = 0;//keep track of first availible spot in colorclasses
+    int FirstFreeColor = 0;//keep track of first available spot in colorclasses
     int lowerBound;
     Graph G;
     LinkedList<Integer> permutation;
-    int reerun;
-    int tryKillCliqus;
+    int stopRecomputing;
+    int sizeOfCliquesToResolve;
     int[] cliqueCut = new int[]{0,0,0,0,0,0,0};
 
     int[] color;
@@ -21,9 +21,21 @@ public class CliqueCover {
         color = new int[G.nodeArray.length];
     }
 
-    public int cliqueCoverIterations(int k, int reerun, LinkedList<Integer> oldPermutation, int notResolveCliques) {
+    /**
+     * This is a heuristic for computing a clique cover.
+     * The size of the clique cover serves as a lower bound in the main branching algorithm
+     * The algorithm for the heuristic is inspired by "On the Efficiency of an Order-based Representation in the Clique Covering Problem" by David Chalupa
+     * The algorithm quality of the clique cover depends on the permutation of the nodes which is used
+     * @param k number of iterations that the clique cover is computed
+     * @param stopRecomputing computing clique cover is stopped if the clique cover did not improve stopRecomputing-many times
+     * @param oldPermutation permutation of nodes which was previously computed
+     * @param sizeOfCliquesToResolve we try to resolve all cliques of at most this size (effective but costly)
+     */
+    public void iterativeCliqueCover(int k, int stopRecomputing, LinkedList<Integer> oldPermutation, int sizeOfCliquesToResolve) {
         lowerBound = 0;
-        tryKillCliqus = notResolveCliques;
+        this.sizeOfCliquesToResolve = sizeOfCliquesToResolve;
+
+        //if no permutation exists, compute random permutation
         if (oldPermutation == null){
             permutation = new LinkedList<>();
             for (int i = 0; i < G.nodeArray.length; i++) {
@@ -31,9 +43,10 @@ public class CliqueCover {
             }
             Collections.shuffle(permutation);
         }
+        //else use existing permutation
         else permutation = oldPermutation;
-        this.reerun = reerun;
-        while (k > 0 && reerun > 0){
+        this.stopRecomputing = stopRecomputing;
+        while (k > 0 && stopRecomputing > 0){
             colorclasses = new LinkedList[G.activeNodes];
             colorcounts = new int[G.activeNodes];
             FirstFreeColor = 0;
@@ -41,72 +54,15 @@ public class CliqueCover {
             for (int j = 0; j < G.nodeArray.length; j++) {
                 color[j] = -1;
             }
-            permutation = cliqueCoverNew();
+            permutation = cliqueCover();
             k--;
         }
-        //improveSolution();
-        return  G.activeNodes - FirstFreeColor;
     }
 
 
-    private LinkedList<Integer> cliqueCover(){ 
-        for (int i: permutation) {//forall active nodes in permutation
-            Node myNode = G.nodeArray[i];
-            if (!myNode.active) continue;
-            //for all neighbors that are active and colored decrement that color
-            int remember = -1;
-            boolean createNewClass = true;
-            for (int neighbourInfo: myNode.neighbours) {
-                Node neighbour = G.nodeArray[neighbourInfo];
-                if (!neighbour.active || color[neighbourInfo]==-1) continue;
-                colorcounts[color[neighbourInfo]] --;
-                if (colorcounts[color[neighbourInfo]] == 0){
-                    colorclasses[color[neighbourInfo]].add(myNode.id);
-                    color[i] = color[neighbourInfo];
-                    colorcounts[color[neighbourInfo]]++;
-                    remember = neighbourInfo;
-                    createNewClass = false;
-                    break;
-                }
-
-            }
-            for (int neighbourInfo : myNode.neighbours){
-                Node neighbour = G.nodeArray[neighbourInfo];
-                if (!neighbour.active || color[neighbourInfo]==-1) continue;
-                colorcounts[color[neighbourInfo]] ++;
-                if (remember == neighbourInfo) break;
-            }
-            if (createNewClass) {
-                LinkedList<Integer> ll = new LinkedList<>();
-                ll.add(myNode.id);
-                color[i] = FirstFreeColor;
-                colorclasses[FirstFreeColor] = ll;
-                colorcounts[FirstFreeColor] = 1;
-                FirstFreeColor++;
-            }
-
-        }
-        LinkedList<Integer> perm = new LinkedList<>();
-        shuffleArray(colorclasses);
-        for (LinkedList<Integer> color: colorclasses) {
-            if (color == null) break;
-            perm.addAll(color);
-        }
-        int newlowerBound = G.activeNodes - FirstFreeColor;
-        if (newlowerBound <= lowerBound){
-            reerun --;
-        }
-        else {
-            lowerBound = newlowerBound;
-        }
-        Collections.reverse(perm);
-        //System.out.println("the lower bound is " + lowerBound);
-        //System.out.println("the first free color is " + FirstFreeColor);
-        return perm;
-    }
-
-    private LinkedList<Integer> cliqueCoverNew(){
-        for (int i: permutation) {//forall active nodes in permutation
+    private LinkedList<Integer> cliqueCover(){
+        //color nodes based on permutation
+        for (int i: permutation) {
             Node myNode = G.nodeArray[i];
             if (!myNode.active) continue;
             //for all neighbors that are active and colored decrement that color
@@ -146,27 +102,29 @@ public class CliqueCover {
             }
         }
         improveSolution();
+        //build new permutation from color classes
         LinkedList<Integer> perm = new LinkedList<>();
-        shuffleArray(colorclasses);
+        shuffleArray(colorclasses); //shuffling sometimes improves the color classes in the next iteration
         for (LinkedList<Integer> color: colorclasses) {
             if (color == null) break;
             perm.addAll(color);
         }
-        int newlowerBound = G.activeNodes - FirstFreeColor;
-        if (newlowerBound <= lowerBound){
-            reerun --;
+        int newLowerBound = G.activeNodes - FirstFreeColor;
+        if (newLowerBound <= lowerBound){
+            stopRecomputing--;
         }
         else {
-            lowerBound = newlowerBound;
+            lowerBound = newLowerBound;
         }
         Collections.reverse(perm);
-        //System.out.println("the lower bound is " + lowerBound);
-        //System.out.println("the first free color is " + FirstFreeColor);
         return perm;
     }
 
+    /**
+     * This function tries to improve the clique cover by redistributing nodes from small cliques to different cliques
+     */
     public void improveSolution() {
-        for (int i = 0; i < tryKillCliqus; i++) {
+        for (int i = 0; i < sizeOfCliquesToResolve; i++) {
             for (int l = 0; l < FirstFreeColor; l++) {
                 LinkedList<Integer> colorlist = colorclasses[l];
                     if (colorlist.size() < i) {
@@ -216,6 +174,7 @@ public class CliqueCover {
                 }
             }
     }
+
     private void shuffleArray(LinkedList<Integer>[] ar)
     {
         Random rnd = ThreadLocalRandom.current();
