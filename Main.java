@@ -4,13 +4,16 @@ import java.util.LinkedList;
 public class Main {
     public static void main(String[] args) {
         long startTime = System.nanoTime();
+        // the variable in the next line can be set manually:
+        // setting inputFromFile = true, the program will read the graph from the file specified below.
+        // setting inputFromFile = false, the program will read the graph from the standard input.
         boolean inputFromFile = true; //set to true for file input, false for autograder
         Graph G;
-        if (inputFromFile) G = Parser.parseGraph("../Algorithm Engineering/3-medium-sized/vc157.dimacs");
+        if (inputFromFile) G = Parser.parseGraph("../Algorithm Engineering/3-medium-sized/vc005.dimacs");
         else G = Parser.parseGraph();
         Branching b = new Branching(G);
         LinkedList<Node> vc = b.solve();
-        System.out.println("#recursive steps: " + b.recursiveSteps);
+        //System.out.println("#recursive steps: " + b.recursiveSteps);
         System.out.println("# the vertex cover is: ");
         long time = System.nanoTime();
         for (Node node : vc) {

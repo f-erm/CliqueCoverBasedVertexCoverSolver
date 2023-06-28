@@ -1,30 +1,22 @@
-import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Stack;
 
 public class Preprossessing {
-    static Stack<OldNode[]> mergedNodes = new Stack<>();
     /**
      * removes all nodes with degree one and their neighbour iteratively and
      * sets partialSolution to a list of all neighbours of the degree-one-nodes.
+     * The idea is to reduce the size of the data structures encoding the graph
+     * before applying the more complicated reduction rules (where deleting a
+     * node will only result in setting the node to inactive and not in deleting
+     * in from the data structure, as here).
      * @param G graph
      */
 
     public static LinkedList<Node> doAllThePrep(Graph G){
         LinkedList<OldNode> oldSolution = removeDegreeOneBetter(G);
-        //G.checkTotalEdgesOldGraph();
         removeDegreeZero(G);
-
-
         //removes deg 0 and deg 1 nodes
-        Iterator<OldNode> it = G.oldNodeList.iterator();
-        while (it.hasNext()) {
-            OldNode node = it.next();
-            if (!node.active) {
-                it.remove();
-            }
-        }
+        G.oldNodeList.removeIf(node -> !node.active);
 
         int i = 0;
         LinkedList <Node> goodSolution = new LinkedList<>();
@@ -37,29 +29,6 @@ public class Preprossessing {
         return goodSolution;
     }
 
-    public static LinkedList<OldNode> removeDegreeOne(Graph G){
-        boolean changed = true;
-        LinkedList<OldNode> solution = new LinkedList<>();
-        LinkedList<OldNode> toRemove = new LinkedList<>();
-        while (changed){
-            for (OldNode nodeToRemove : toRemove) {
-                G.removeNode(nodeToRemove);
-            }
-            toRemove.clear();
-            changed = false;
-            for (OldNode oldNode : G.oldNodeList) {
-                if(oldNode.neighbors.size()==1){
-                    solution.add(oldNode.neighbors.getFirst());
-                    toRemove.add(oldNode.neighbors.getFirst());
-                    toRemove.add(oldNode);
-                    changed = true;
-                    break;
-                }
-            }
-        }
-        return solution;
-    }
-
     public static LinkedList<OldNode> removeDegreeOneBetter(Graph G){
         Stack<OldNode> notCheckedNodes = new Stack<>();
         LinkedList<OldNode> solution = new LinkedList<>();
@@ -69,7 +38,6 @@ public class Preprossessing {
                 if(w.neighbors.size()==1){
                     OldNode neighbour = w.neighbors.remove();
                     G.totalEdges --;
-                    //G.checkTotalEdgesOldGraph();
                     solution.add(neighbour);
                     for (OldNode v: neighbour.neighbors) {
                         if (v != w){
@@ -79,22 +47,17 @@ public class Preprossessing {
                         }
                     }
                     neighbour.neighbors.clear();
-                    //G.checkTotalEdgesOldGraph();
                 }
             }
 
             if(oldNode.neighbors.size()==1){
                 OldNode neighbour = oldNode.neighbors.remove();
                 G.totalEdges --;
-                //G.checkTotalEdgesOldGraph();
                 solution.add(neighbour);
                 for (OldNode v: neighbour.neighbors) {
                     if (v != oldNode){
                         notCheckedNodes.push(v);
                         G.totalEdges --;
-                        //if (G.checkTotalEdgesOldGraph()){
-                        //    a ++;
-                        //}
                         v.neighbors.remove(neighbour);
                     }
                 }

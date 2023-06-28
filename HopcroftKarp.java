@@ -269,7 +269,6 @@ public class HopcroftKarp implements Cloneable {
         totalCycleLB = 0;
         for (int i = 0; i < size; i++){
             if (!inCycle[i] && B.nodeArray[i].active && pair[i] != nil){
-                int cycleLB = 1;
                 int count = 1;
                 int partner = pair[i];
                 inCycle[i] = true;
@@ -278,11 +277,9 @@ public class HopcroftKarp implements Cloneable {
                 pos[cyclCnt++] = i;
                 while (partner != i + size){
                     if (partner == nil){
-                        cycleLB--;
                         break;
                     }
                     if (inCycle[partner - size]){
-                        cycleLB -= 2;
                         break;
                     }
                     inCycle[partner - size] = true;
@@ -290,7 +287,6 @@ public class HopcroftKarp implements Cloneable {
                     cycle[count++] = partner - size;
                     pos[partner - size] = count;
                     partner = pair[partner - size];
-                    cycleLB++;
                 }
                 boolean clique = true;
                 for (int j = 0; j < count; j++) {
@@ -352,7 +348,7 @@ public class HopcroftKarp implements Cloneable {
         HopcroftKarp HKn =  new HopcroftKarp();
         HKn.size = this.size;
         HKn.nil = this.nil;
-        HKn.pair = (int[]) this.pair.clone();
+        HKn.pair = this.pair.clone();
         HKn.actions = (Stack<int[]>) this.actions.clone();
         HKn.dist = this.dist.clone();
         HKn.states = (Stack<int[]>) this.states.clone();

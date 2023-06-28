@@ -49,7 +49,7 @@ public class Node implements Comparable<Node>, Cloneable{
     }
 
     @Override
-    public Object clone(){ //to be tested!
+    public Object clone(){
         Node N = new Node(this.name,this.id,0);
         N.active = this.active;
         N.activeNeighbours = this.activeNeighbours;

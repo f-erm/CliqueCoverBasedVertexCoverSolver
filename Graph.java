@@ -30,8 +30,14 @@ public class Graph implements Cloneable{
         reduceDegOneQueue = new LinkedList<>();
         reduceDegTwoQueue = new LinkedList<>();
     }
-    public Graph(boolean hi){
 
+    /**
+     * not a real constructor; only used for cloning.
+     */
+    public Graph(boolean hi){
+        if (hi){
+            firstActiveNode = 0;
+        }
     }
 
     public void makeConsistent(){

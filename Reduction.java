@@ -10,22 +10,6 @@ public class Reduction {
     Stack<Integer> packingReductions = new Stack<>();
     Graph G;
     HopcroftKarp hk;
-    long deg1Time = 0;
-    int deg1cuts = 0;
-    long deg2Time = 0;
-    int deg2cuts = 0;
-    long deg0Time = 0;
-    int deg0cuts = 0;
-    long unconfTime = 0;
-    int unconfcuts = 0;
-    long bussTime = 0;
-    int busscuts = 0;
-    long lpTime = 0;
-    int lpcuts = 0;
-    int twincuts = 0;
-    long twintime = 0;
-    long cctime= 0;
-    int cccuts = 0;
 
     public Reduction(Graph G, HopcroftKarp hk) {
         this.G = G;
@@ -36,48 +20,29 @@ public class Reduction {
         this.hk = hk;
         neighbourPosStack = new Stack<>();
     }
-    public int rollOutAll(){
-        removedNodes.push(new int[]{0});
-        return 0;
-    }
 
-    public int rollOutAll(int k, boolean doReduction){
-        int oldK = VCNodes.size();
-        removedNodes.push(new int[]{0});
-        removeDegreeX(k);
-        long time = System.nanoTime();
-        if (doReduction) removeTwin();
-        twintime += System.nanoTime() - time;
-        if (VCNodes.size() - oldK > k) return k + 1;
-        time = System.nanoTime();
-        if (doReduction) applyUnconfined();
-        if (VCNodes.size() - oldK > k) return k + 1;
-            unconfTime += System.nanoTime() - time;
-            time = System.nanoTime();
-            if (doReduction) improvedLP(G);
-            if (VCNodes.size() - oldK > k) return k + 1;
-            lpTime += System.nanoTime() - time;
-            removeDegreeX(k);
-            if (BussRule(k)) {
-                return k + 1;
-            }
-        return VCNodes.size() - oldK;
-    }
-
-    public int rollOutAllHeuristic(boolean doReduction, InitialSolution insol){
-        int oldK = VCNodes.size();
+    /**
+     * @param doReduction do more time-consuming reduction rules
+     * @param insol an instance of InitialSolution
+     * performs reduction rules before searching for an upper bound.
+     */
+    public void rollOutAllHeuristic(boolean doReduction, InitialSolution insol){
         removeDegreeXHeuristic(insol);
         if (doReduction) removeTwin();
         if (doReduction) applyUnconfined();
         if (doReduction) improvedLP(G);
         removeDegreeXHeuristic(insol);
-        return VCNodes.size() - oldK;
     }
+
+    /**
+     * performs reduction rules before branching.
+     * @param doReduction do more time-consuming reduction rules
+     * @return the number of deleted nodes by all reductions
+     */
     public int rollOutAllInitial(boolean doReduction){
         int oldK = VCNodes.size();
         removedNodes.push(new int[]{0});
         removeDegreeXInitial();
-        //if (doReduction) removeTwin();
         boolean again = doReduction;
         while (again) {
             again = applyUnconfined();
@@ -90,7 +55,10 @@ public class Reduction {
         return VCNodes.size() - oldK;
     }
 
-    public boolean removeTwin() {
+    /**
+     * Twin reduction, high running time, mediocre output.
+     */
+    public void removeTwin() {
         LinkedList<LinkedList<Integer>> neighbourLists = new LinkedList<>();
         LinkedList<Integer> deg3nodes = new LinkedList<>();
         for (int i = 0; i < G.nodeArray.length; i++) {
@@ -116,7 +84,6 @@ public class Reduction {
                         int third = neighbours.get(2);
                         int v = deg3nodes.get(j);
                         if (v == -1) continue;
-                        twincuts++;
                         if (!arrayContains(G.nodeArray[first].neighbours, second) && !arrayContains(G.nodeArray[first].neighbours,third) && !arrayContains(G.nodeArray[second].neighbours, third)){
                             removeUselessNodes(G.nodeArray[second]);
                             removeUselessNodes(G.nodeArray[third]);
@@ -141,9 +108,13 @@ public class Reduction {
                 neighbourLists.add(neighbours);
             }
         }
-        return false;
     }
 
+    /**
+     * @param G the graph
+     * @return a boolean that is true when the improvedLP rule was successfull in reducing the graph
+     * performs the LP reduction.
+     */
     public boolean improvedLP(Graph G) {
         boolean changed = false;
         hk.searchForAMatching();
@@ -193,12 +164,11 @@ public class Reduction {
             }
         }
         while (true) {
-            VeryStrongComponentsFinder vscf = new VeryStrongComponentsFinder(hk.B, residualGraph);
+            StrongComponentsFinder vscf = new StrongComponentsFinder(hk.B, residualGraph);
             LinkedList<LinkedList<Integer>> scc = vscf.findStrongComponents();
             if (scc.isEmpty()) break;
             for (LinkedList<Integer> component : scc) {
                 for (int n : component) {
-                    lpcuts++;
                     changed = true;
                     if (n < size) {
                         if (G.nodeArray[n].active) removeUselessNodes(G.nodeArray[n]);
@@ -212,67 +182,9 @@ public class Reduction {
         return changed;
     }
 
-    private void removeDegreeX(int k) {
-        boolean changed = true;
-        while (changed) {
-            changed = false;
-        for (Node node : G.nodeArray) {
-            if (!node.active) continue;
-            if (node.activeNeighbours == 1) {
-                deg1cuts++;
-                int i = 0;
-                while (!G.nodeArray[node.neighbours[i]].active) {
-                    i++;
-                }
-                Node neighbour = G.nodeArray[node.neighbours[i]];
-                removeVCNodes(neighbour);
-                removeUselessNodes(node);
-                changed = true;
-                break;
-            }
-            if (node.activeNeighbours == 2) {
-                deg2cuts++;
-                long time = System.nanoTime();
-                Node first = null, second = null;
-                int it = 0;
-                while (first == null) {
-                    Node current = G.nodeArray[node.neighbours[it++]];
-                    if (current.active) first = current;
-                }
-                while (second == null) {
-                    Node current = G.nodeArray[node.neighbours[it++]];
-                    if (current.active) second = current;
-                }
-                if (!arrayContains(first.neighbours, second.id)) {
-                    int oldNumNeighbours =  first.neighbours.length;
-                    removeVCNodes(node);
-                    removeUselessNodesWithoutDegreeReducing(second);
-                    mergeNodes(first, second); // case v,w \not \in E
-                    G.reduceDegreeMerge(first, second, first.neighbours.length - oldNumNeighbours);
-                    mergedNodes.push(new int[]{first.id, second.id, node.id});
-                } else { // case v,w \in E
-                    removeUselessNodes(node);
-                    removeVCNodes(first);
-                    removeVCNodes(second);
-                }
-                changed = true;
-                deg2Time += System.nanoTime() - time;
-                break;
-            }
-            if (node.activeNeighbours > k) {
-                removeVCNodes(node);
-                changed = true;
-                break;
-            }
-            if (node.activeNeighbours == 0) {
-                deg0cuts++;
-                removeUselessNodes(node);
-                changed = true;
-                break;
-            }
-        }
-    }
-}
+    /**
+     * Applies degree 0, 1 and 2 reductions before branching.
+     */
     private void removeDegreeXInitial() {
         Queue<Integer> deg0 = new LinkedList<>();
         Queue<Integer> deg1 = new LinkedList<>();
@@ -280,7 +192,6 @@ public class Reduction {
         for (Node node : G.nodeArray) {
             if (!node.active) continue;
             if (node.activeNeighbours == 1) {
-                deg1cuts++;
                 int i = 0;
                 while (!G.nodeArray[node.neighbours[i]].active) {
                     i++;
@@ -297,8 +208,6 @@ public class Reduction {
                 continue;
             }
             if (node.activeNeighbours == 2) {
-                deg2cuts++;
-                long time = System.nanoTime();
                 Node first = null, second = null;
                 int it = 0;
                 while (first == null) {
@@ -354,11 +263,9 @@ public class Reduction {
                         if (G.nodeArray[n].activeNeighbours == 2) deg2.offer(n);
                     }
                 }
-                deg2Time += System.nanoTime() - time;
                 continue;
             }
             if (node.activeNeighbours == 0) {
-                deg0cuts++;
                 removeUselessNodes(node);
             }
         }
@@ -367,7 +274,6 @@ public class Reduction {
                 Node node = G.nodeArray[deg1.poll()];
                 if (!node.active) continue;
                 if (node.activeNeighbours == 1) {
-                    deg1cuts++;
                     int i = 0;
                     while (!G.nodeArray[node.neighbours[i]].active) {
                         i++;
@@ -386,7 +292,6 @@ public class Reduction {
             while (!deg2.isEmpty()){
                 Node node = G.nodeArray[deg2.poll()];
                 if (node.activeNeighbours == 2 && node.active) {
-                    deg2cuts++;
                     Node first = null, second = null;
                     int it = 0;
                     while (first == null) {
@@ -447,18 +352,21 @@ public class Reduction {
             while (!deg0.isEmpty()){
                 Node node = G.nodeArray[deg0.poll()];
                 if (node.activeNeighbours == 0 && node.active) {
-                    deg0cuts++;
                     removeUselessNodes(node);
                 }
             }
         }
     }
+
+    /**
+     * @param insol the initial solution instance.
+     * performs all degree reduction rules before searching for an upper bound.
+     */
 private void removeDegreeXHeuristic(InitialSolution insol){
         while (!insol.reduceDegTwoQueue.isEmpty() || !insol.reduceDegZeroQueue.isEmpty() || !insol.reduceDegOneQueue.isEmpty()) {
             while (!insol.reduceDegOneQueue.isEmpty()) {
                 Node node = G.nodeArray[insol.reduceDegOneQueue.poll()];
                 if (node.active && node.activeNeighbours == 1) {
-                    deg1cuts++;
                     int i = 0;
                     while (!G.nodeArray[node.neighbours[i]].active) {
                         i++;
@@ -473,7 +381,6 @@ private void removeDegreeXHeuristic(InitialSolution insol){
             while (!insol.reduceDegTwoQueue.isEmpty()) {
                 Node node = G.nodeArray[insol.reduceDegTwoQueue.poll()];
                 if (node.active && node.activeNeighbours == 2) {
-                    deg2cuts++;
                     Node first = null, second = null;
                     int it = 0;
                     while (first == null) {
@@ -516,7 +423,6 @@ private void removeDegreeXHeuristic(InitialSolution insol){
             while (!insol.reduceDegZeroQueue.isEmpty()) {
                 Node node = G.nodeArray[insol.reduceDegZeroQueue.poll()];
                 if (node.active && node.activeNeighbours == 0) {
-                    deg0cuts++;
                     removeUselessNodes(node);
                     insol.reduceDegree(node);
                 }
@@ -524,12 +430,9 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         }
 }
 
-
-    private int findInArray(int[] array, int el){
-        for (int i = 0; i < array.length; i++) if (array[i] == el) return i;
-        return -1;
-    }
-
+    /**
+     * revert all reductions until the last recursive call, for branching
+     */
     public void revertReduction() {
         int[] action = removedNodes.pop();
         while (action[0] != 0) {
@@ -577,51 +480,16 @@ private void removeDegreeXHeuristic(InitialSolution insol){
                     node.neighbourPositions = newPositionArray;
                     if (hk != null) mergedNodes.pop();
                     G.increaseDegreeMerge(node, oldNeighbours);
-                    /*for (Packing p : node.affectedConstraints){
-                        if (p.type == 1) p.right -= action[3];
-                        else p.right -= action[4];
-                    }*/
                     break;
             }
             action = removedNodes.pop();
         }
     }
 
-    private boolean BussRule(int k){
-        return (G.activeNodes > ((long) k * (long) k) + (long) k || G.totalEdges > (long) k * (long) k);
-    }
-
-    public int reduceThroughCC(CliqueCover cc, int k, Graph G){
-        long time = System.nanoTime();
-        LinkedList<Node> cliqueNeighbours = new LinkedList<>();
-        for (int i = 0; i < cc.FirstFreeColor; i++) {
-            for (Integer nodeId: cc.colorclasses[i]) {
-                Node v = G.nodeArray[nodeId];
-                if(v.active && v.activeNeighbours > 0 && v.activeNeighbours == (cc.colorclasses[i].size()-1)){
-                    if (k >= v.activeNeighbours) {
-                        cccuts++;
-                        for (int u : v.neighbours) {
-                            Node toDelete = G.nodeArray[u];
-                            if (toDelete.active) {
-                                removeVCNodes(toDelete);
-                                k--;
-                            }
-                        }
-                    }
-                    else {
-                        cctime += System.nanoTime() - time;
-                        return -1;
-                    }
-                    removeUselessNodes(v);
-                    break;
-                }
-            }
-        }
-        cctime += System.nanoTime() - time;
-        return k;
-    }
-
-
+    /**
+     * removes a node from the graph that is not in the vertex cover.
+     * @param node node to remove
+     */
     public void removeUselessNodes(Node node){
         removedNodes.push(new int[]{1, node.id});
         G.removeNode(node);
@@ -633,6 +501,12 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         }
         updatePackingOfMergedNodes(node, 1);
     }
+
+    /**
+     * Removes a node from the graph that is not in the vertex cover
+     * without updating the max degree data structure.
+     * @param node node to remove
+     */
     private void removeUselessNodesWithoutDegreeReducing(Node node){
         removedNodes.push(new int[]{1, node.id});
         G.removeNodeWithoutDegreeReducing(node);
@@ -644,6 +518,10 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         }
     }
 
+    /**
+     * removes a node from the graph that is part of the vertex cover.
+     * @param node node to remove
+     */
     public void removeVCNodes(Node node){
         removedNodes.push(new int[]{2, node.id});
         VCNodes.add(node);
@@ -709,15 +587,6 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         nodeA.neighbours = newArray;
         nodeA.neighbourPositions = newPositionArray;
         int c = 0;
-        /*for (Packing p : nodeA.affectedConstraints){
-            if (p.type == 1) p.right += addedNeighbours.size();
-            else{
-                HashSet<Integer> hs = new HashSet<>();
-                for (int n : p.startNode.neighbours) if (G.nodeArray[n].active) hs.add(n);
-                for (int n : addedNeighbours) if (!hs.contains(n)) c++;
-                p.right += c;
-            }
-        }*/
         removedNodes.push(new int[]{3, nodeA.id, nodeB.id, addedNeighbours.size(), c});
         nodeA.activeNeighbours += addedNeighbours.size();
         //for the heuristic we don't need to compute hk, so it is null
@@ -735,9 +604,9 @@ private void removeDegreeXHeuristic(InitialSolution insol){
 
     private boolean new_unconfined(Integer v, BitSet N_S){
         //check node for unconfined. Bitsset needs to be initialized to all zeros, all changes will be reverted in the end
-        LinkedList<Integer> S = new LinkedList<Integer>();
+        LinkedList<Integer> S = new LinkedList<>();
         S.add(v);
-        LinkedList<Integer> N_S_aslist = new LinkedList<Integer>();
+        LinkedList<Integer> N_S_aslist = new LinkedList<>();
         N_S.set(v);
         N_S_aslist.add(v);
         for(int i : G.nodeArray[v].neighbours){
@@ -779,7 +648,6 @@ private void removeDegreeXHeuristic(InitialSolution insol){
                         N_S_aslist.add(i);
                     }
                 }
-                final_u = null;
                 continue;
             }
             reset_bitset(N_S, N_S_aslist);
@@ -829,7 +697,6 @@ private void removeDegreeXHeuristic(InitialSolution insol){
         boolean[] checked = new boolean[G.nodeArray.length];
         for(int i=0;i< G.nodeArray.length;i++){//geht das besser?
             if (G.nodeArray[i].active && new_unconfined(i,N_S)) {
-                unconfcuts++;
                 changed = true;
                 removeVCNodes(G.nodeArray[i]);
                 for(Integer j : G.nodeArray[i].neighbours){

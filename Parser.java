@@ -25,7 +25,7 @@ public class Parser {
     }
 
 
-    //Same function as above, but input is not given as string and provided by the scanner instead. TODO: combine both into one function
+    //Same function as above, but input is not given as string and provided by the scanner instead.
     public static Graph parseGraph(){
         Graph g = new Graph();
         Scanner scanner = new Scanner(System.in);
@@ -46,7 +46,6 @@ public class Parser {
     private static Graph createGraph(Graph g){
         //Convert Hashmap into sorted list and apply REDUKTIONSREGELN.
         //This detour is mainly to allow sorting of the graph. Sorting after we have converted into an array is impossible, as we reference nodes by their graph array index
-        long time = System.nanoTime();
         LinkedList<OldNode> ll = new LinkedList<>(g.nodeHashMap.values());
         Collections.sort(ll);
         Collections.reverse(ll);
@@ -69,9 +68,9 @@ public class Parser {
         g.permutation = new Node[g.nodeArray.length];
         g.posInPermutation = new int[g.nodeArray.length];
         g.borderIndices = new int[g.nodeArray.length];
-        int deg = 0;
+        // initialize the data structure to keep nodes sorted by degree
         if (g.nodeArray.length > 0) {
-            deg = g.nodeArray[0].activeNeighbours;
+            int deg = g.nodeArray[0].activeNeighbours;
             for (int k = deg + 1; k < g.borderIndices.length; k++) g.borderIndices[k] = -1;
             for (Node n : g.nodeArray) {
                 if (n.activeNeighbours < deg) {

@@ -3,109 +3,117 @@ import java.util.LinkedList;
 import java.util.Stack;
 
 public class StrongComponentsFinder {
-     int index;
-     Stack<Integer> stack;
-     LinkedList<LinkedList<Integer>> allComponents;
-     Graph B;
-     LinkedList<Integer>[] residualGraph;
-     int[] ccindex;
-     int[] lowLink;
-     boolean[] onStack;
+    int index;
+    Stack<Integer> stack;
+    LinkedList<LinkedList<Integer>> allComponents;
+    Graph B;
+    LinkedList<Integer>[] residualGraph;
+    int[] ccindex;
+    int[] lowLink;
+    final int size;
+    boolean[] onStack;
 
-     public StrongComponentsFinder(Graph B, LinkedList<Integer>[] residualGraph){
-         this.B = B;
-         this.residualGraph = residualGraph;
-         stack = new Stack<>();
-         allComponents= new LinkedList<>();
-         index = 0;
-         ccindex = new int[B.nodeArray.length - 1];
-         lowLink = new int[B.nodeArray.length - 1];
-         onStack = new boolean[B.nodeArray.length - 1];
-         for (int i = 0; i < ccindex.length; i++){
-             ccindex[i] = -1;
-             lowLink[i] = -1;
-         }
-     }
+    public StrongComponentsFinder(Graph B, LinkedList<Integer>[] residualGraph){
+        this.B = B;
+        this.residualGraph = residualGraph;
+        size = residualGraph.length - 2;
+        stack = new Stack<>();
+        allComponents = new LinkedList<>();
+        index = 0;
+        ccindex = new int[size];
+        lowLink = new int[size];
+        onStack = new boolean[size];
+    }
+
+    /**
+     * @return a list of strongly connected components as lists of nodes
+     */
     public  LinkedList<LinkedList<Integer>> findStrongComponents(){
         stack = new Stack<>();
         allComponents= new LinkedList<>();
         index = 0;
-        ccindex = new int[B.nodeArray.length - 1];
-        lowLink = new int[B.nodeArray.length - 1];
-        onStack = new boolean[B.nodeArray.length - 1];
-        for (int i = 0; i < ccindex.length; i++){
+        for (int i = 0; i < size; i++){
             ccindex[i] = -1;
             lowLink[i] = -1;
         }
-        for (int i = 0; i < B.nodeArray.length - 1; i++) {
+        for (int i = 0; i < size; i++) {
             Node node = B.nodeArray[i];
             if (node.active && ccindex[i] == -1){
-                strongConnect(node);
+                strongConnect(node.id);
             }
         }
         return checkZulaessig();
     }
 
-    private  void strongConnect(Node node){
-        if (node.id > B.nodeArray.length - 2) return;
-        ccindex[node.id] = index;
-        lowLink[node.id] = index;
-        index ++;
-        stack.push(node.id);
-        onStack[node.id] = true;
-        for (int neighbourID : residualGraph[node.id]) {
-            if (neighbourID > B.nodeArray.length - 2 ||!B.nodeArray[neighbourID].active) continue;
-            Node neighbour = B.nodeArray[neighbourID];
-            if (ccindex[neighbourID] == -1){
-                strongConnect(neighbour);
-                lowLink[node.id] = min(lowLink[node.id], lowLink[neighbourID]);
+    private void strongConnect(Integer node) {
+        Stack<Integer> work = new Stack<>();
+        Stack<Integer> work2 = new Stack<>();
+        work.push(node);
+        work2.push(0);
+        while (!work.isEmpty()){
+            int u = work.pop();
+            int j = work2.pop();
+            if (j == 0){
+                ccindex[u] = index;
+                lowLink[u] = index++;
+                stack.push(u);
+                onStack[u] = true;
             }
-            else if (onStack[neighbourID]) {
-                lowLink[node.id] = min(lowLink[node.id], ccindex[neighbourID]);
+            boolean recurse = false;
+            for (int i = j; i < residualGraph[u].size(); i++){
+                int v = residualGraph[u].get(i);
+                if (v >= size || !B.nodeArray[v].active) continue;
+                if (lowLink[v] == -1){
+                    work.push(u);
+                    work2.push(i + 1);
+                    work.push(v);
+                    work2.push(0);
+                    recurse = true;
+                    break;
+                }
+                else if (onStack[v]) lowLink[u] = min(lowLink[u], ccindex[v]);
+            }
+            if (!recurse){
+                if (lowLink[u] == ccindex[u]){
+                    LinkedList<Integer> scc = new LinkedList<>();
+                    while (true){
+                        int v = stack.pop();
+                        onStack[v] = false;
+                        scc.add(v);
+                        if (v == u) break;
+                    }
+                    allComponents.add(scc);
+                }
+                if (!work.isEmpty()){
+                    int v = u;
+                    u = work.peek();
+                    lowLink[u] = min(lowLink[u], lowLink[v]);
+                }
             }
         }
-
-        if (lowLink[node.id] == ccindex[node.id]){
-            LinkedList<Integer> strongComponent = new LinkedList<>();
-            Integer integer = stack.pop();
-            Node w = B.nodeArray[integer];
-            onStack[integer] = false;
-            strongComponent.add(integer);
-            while (w != node){
-                integer = stack.pop();
-                w = B.nodeArray[integer];
-                onStack[integer] = false;
-                strongComponent.add(integer);
-            }
-            allComponents.add(strongComponent);
-        }
-    }
-
-
-    //this method is not redundent because -1 is the value for uninitialized and I dont want this to be the minimum
-    private  int min(int a, int b){
-        if (a == -1 ) return b;
-        else if (b == -1) return a;
-        else if (a <= b) return a;
-        else return b;
     }
 
     private  LinkedList<LinkedList<Integer>> checkZulaessig() {
-        int size = B.nodeArray.length / 2;
+        int hkSize = B.nodeArray.length / 2;
         LinkedList<LinkedList<Integer>> goodScc = new LinkedList<>();
         HashSet<Integer> evilNodes = new HashSet<>();
         for (LinkedList<Integer> scc : allComponents) {
+            if (scc.size() == 1) {
+                continue;
+            }
             boolean add = true;
             HashSet<Integer> hs = new HashSet<>();
             for (int id : scc) {
-                if (id > size) id -= size;
+                if (id > hkSize) id -= hkSize;
                 if (!hs.add(id)){
                     evilNodes.addAll(scc);
                     add = false;
                     break;
                 }
             }
+            if (!add) continue;
             for (int node : scc){
+                if (!add) break;
                 for (int neighbour : residualGraph[node]){
                     /*if (evilNodes.contains(neighbour)){
                         evilNodes.addAll(scc);
@@ -122,5 +130,11 @@ public class StrongComponentsFinder {
         }
         return goodScc;
     }
+    private  int min(int a, int b){
+        if (a == -1 ) return b;
+        else if (b == -1) return a;
+        else return Math.min(a, b);
+    }
+
 
 }

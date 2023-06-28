@@ -40,7 +40,7 @@ public class InitialSolution {
     /**
      * this function return a vertex cover which might not be optimal
      * @param highestDegree if true the algorithm takes the highest degree vertex into to vertex cover if the reductions are not applicable anymore, otherwise the neighbours of a lowest degree vertex
-     * @return
+     * @return a minimal (but not necessarily minimum) vertex cover.
      */
 
     public LinkedList<Node> vc(boolean highestDegree){
@@ -50,7 +50,6 @@ public class InitialSolution {
             randomPerm = new LinkedList<>(toShuffle);
         }
         LinkedList<Node>vc = new LinkedList<>();
-        int sizeOfOldVC = reduction.VCNodes.size();
         counterOfInexactRed = 0;
         //initial reduction
         reduction.rollOutAllInitial(false);
@@ -168,6 +167,7 @@ public class InitialSolution {
         vc.clear();
         for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
         for (Node n : G.nodeArray) n.neighbours = neighbourArrays[n.id];
+        // --- start threading ---
         int procCount = Runtime.getRuntime().availableProcessors();
         ThreadPoolExecutor exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(procCount);//create threadpool based on available cores.
         Future<LinkedList<Node>>[] allResults = new Future[procCount];
@@ -182,6 +182,7 @@ public class InitialSolution {
             }
         }catch (Exception ignored){}
         exec.shutdown();
+        // --- end threading ---
         vc.addAll(G.partialSolution);
         return vc;
     }

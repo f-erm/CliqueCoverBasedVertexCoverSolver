@@ -3,7 +3,6 @@ import java.util.LinkedList;
 
 public class Packing {
 
-    int left;
     int type;
     int right;
     int[] affectedNodes;
