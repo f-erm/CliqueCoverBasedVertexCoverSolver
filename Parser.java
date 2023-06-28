@@ -11,6 +11,7 @@ public class Parser {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.contains("#")) line = line.substring(0,line.indexOf('#'));
+                if (line.contains("p")) line = line.substring(0,line.indexOf('p'));
                 if (line.trim().length() == 0) continue;
                 String[] nodes = line.split("\\s+");
 
@@ -19,6 +20,7 @@ public class Parser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        g.makeConsistent();
         return createGraph(g);
     }
 
@@ -31,11 +33,13 @@ public class Parser {
         while (scanner.hasNext()){
             line = scanner.nextLine();
             if (line.contains("#")) line = line.substring(0,line.indexOf('#'));
+            if (line.contains("p")) line = line.substring(0,line.indexOf('p'));
             if (line.trim().length() == 0) continue;
             String[] nodes = line.split("\\s+");
 
             g.addEdge(nodes[0], nodes[1]);
         }
+        g.makeConsistent();
       return createGraph(g);
 
     }
