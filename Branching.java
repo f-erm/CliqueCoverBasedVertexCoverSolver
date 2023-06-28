@@ -1,14 +1,12 @@
-import java.util.*;
-import java.util.concurrent.Executors;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Stack;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.ThreadPoolExecutor;
 
 
 public class Branching {
     Graph G;
-    int hkCuts = 0;
-    int ccCuts = 0;
-    int packingCuts = 0;
     HopcroftKarp hk;
     Reduction reduction;
     CliqueCover cc;
@@ -17,14 +15,16 @@ public class Branching {
     LinkedList<Node> upperBound;
     int recursiveSteps;
     int firstLowerBound;
-    int procCount;
-    ThreadPoolExecutor exec;
     public Branching(Graph G){
         this.G = G;
         recursiveSteps = 0;
         hk = new HopcroftKarp(G);
-        procCount = Runtime.getRuntime().availableProcessors();
     }
+
+    /**
+     * This is the main function which finds the vertex cover.
+     * @return the smallest vertex cover in G.
+     */
     public LinkedList<Node> solve(){
         reduction = new Reduction(G, hk);
         reduction.rollOutAllInitial(true);
@@ -40,14 +40,14 @@ public class Branching {
             solution.addAll(G.partialSolution);
             return solution;
         }
-        //Fuer kleineren Graphen
+        //delete inactive nodes to obtain a better upper bound via local search
         Graph OldG = G;
         G = G.reduceGraph();
-        HopcroftKarp oldHK = hk;
         Reduction oldReduction = reduction;
         hk = new HopcroftKarp(G);
         reduction = new Reduction(G, hk);
-        //fuer kleineren Graphen Ende
+
+        //calculate initial upper bound
         InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime());
         upperBound = initialSolution.vc(true);
         cc = new CliqueCover(G);
@@ -58,10 +58,12 @@ public class Branching {
         LinkedList<Integer> bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
         long time = System.nanoTime();
+        //compute initial clique cover
         for (int i = 0; i < G.activeNodes * 200 && (System.nanoTime() - time)/1024 < 10000000; i++){
             if (i % 2 == 1){
+                //in every second step, do clique cover local search
                 int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
-                bestPermutation.remove((Integer) rand);
+                bestPermutation.remove((Integer) rand); //This seems completely useless, but it drastically improves the results
                 bestPermutation.add(rand);
                 cc.cliqueCoverIterations(10, 5, bestPermutation, 5);
                 if (cc.lowerBound < bestLowerBound){
@@ -69,6 +71,7 @@ public class Branching {
                     bestPermutation.add(rand, a);
                 }
             }
+            //else, use a random permutation
             else cc.cliqueCoverIterations(10, 5, null, 5);
             if (cc.lowerBound > bestLowerBound){
                 bestLowerBound = cc.lowerBound;
@@ -78,6 +81,7 @@ public class Branching {
         System.out.println("# upper bound: " + (upperBound.size() + oldReduction.VCNodes.size()));
         firstLowerBound = Math.max(hk.totalCycleLB, bestLowerBound);
         System.out.println("# lower bound: " + (firstLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
+        //if we matched upper and lowe bound and can return without branching:
         if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
         if (upperBound.size() - firstLowerBound < 3){ //we are really close, try to get even better bounds
             for (int i = 0; i < 4; i++) {//try to improve upper bound
@@ -117,30 +121,38 @@ public class Branching {
             if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
         }
         recursiveSteps++;
-        exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(procCount);//create threadpool based on available cores.
+        //  --- start of main branching function ---
         branch(G.partialSolution.size() + reduction.VCNodes.size(), upperBound.size(), 0, bestPermutation);
-        exec.shutdownNow();
-        while (!bestMergedNodes.isEmpty()){
+        //  --- end of main branching function ---
+
+        while (!bestMergedNodes.isEmpty()){ //de-merge degree-2-reductions
             int[] merge = bestMergedNodes.pop();
             if (upperBound.contains(G.nodeArray[merge[0]])){
                 upperBound.add(G.nodeArray[merge[1]]);
                 upperBound.remove(G.nodeArray[merge[2]]);
             }
         }
-        return returnModified(upperBound, OldG, G, oldReduction);//Fuer kleineren Graphen
+        return returnModified(upperBound, OldG, G, oldReduction);
     }
 
-    // c is the current solution size, k is the upper bound
+    /**
+     * @param c current solution size
+     * @param k upper bound
+     * @param depth recursion depth
+     * @param lastPerm best known permutation of nodes which is then usedused to compute the clique cover
+     * @return size of the vertex cover. The solution is stored in _____
+     */
     public int branch(int c, int k, int depth, LinkedList<Integer> lastPerm){
         c += reduction.rollOutAllInitial(false);
-        hk.searchForAMatching();
-        cc.cliqueCoverIterations(2,2, lastPerm, 4);
+        hk.searchForAMatching(); // find maximum matching in the bipartite representation of G
+        cc.cliqueCoverIterations(2,2, lastPerm, 4); // find clique cover
         int bestLowerBound = cc.lowerBound;
         if (c + bestLowerBound > k - 2 && c + bestLowerBound < k) {
             int bonus = 0;
             if (depth < 10) {
                 bonus = 20 - depth;
             }
+            // do local search on clique cover
             if (cc.permutation.size() > 0) for (int i = 0; i < 5 + bonus; i++) {
                 int rand = ThreadLocalRandom.current().nextInt(cc.permutation.size());
                 cc.permutation.remove((Integer) rand);
@@ -157,29 +169,28 @@ public class Branching {
             }
         }
         lastPerm = cc.permutation;
+        // we can return since the lower bound is violated
         if (c + Math.max(hk.totalCycleLB, bestLowerBound) >= k) {
-            if (hk.totalCycleLB >= bestLowerBound) hkCuts++;
-            else ccCuts++;
             G.packingViolated = false;
             return k;
         }
+        // we can return since the packing constraints are violated
         if (G.packingViolated){
             G.packingViolated = false;
-            packingCuts++;
             return k;
         }
+        // we can return the vertex cover if all edges are covered
         if (G.totalEdges <= 0 || G.activeNodes <= 0){
             if (G.partialSolution.size() + reduction.VCNodes.size() + solution.size() < upperBound.size()){
                 upperBound = new LinkedList<>(solution);
                 upperBound.addAll(G.partialSolution);
                 upperBound.addAll(reduction.VCNodes);
                 bestMergedNodes = (Stack<int[]>) reduction.mergedNodes.clone();
-                System.out.println("# current best: " + upperBound.size());
             }
             return c;
         }
         Node v;
-        while (true) {
+        while (true) { // find max-degree node that is active
             if (G.permutation[G.firstActiveNode].activeNeighbours == 0 || !G.permutation[G.firstActiveNode].active){
                 G.firstActiveNode++;
                 continue;
@@ -188,29 +199,20 @@ public class Branching {
             break;
         }
         //branch for deleting the node
-        LinkedList<Node> mirrors = new LinkedList<>();
         G.removeNode(v);
         reduction.updatePackingOfMergedNodes(v, 0);
         solution.push(v);
         v.inVC = true;
         LinkedList<Node> ll = new LinkedList<>();
         ll.add(v);
+        // update packing constraints
         Stack<Packing> packingList = new Stack<>();
-        if (!mirrors.isEmpty()){
-            for (Node m : mirrors){
-                G.removeNode(m);
-                reduction.updatePackingOfMergedNodes(m, 0);
-                ll.add(m);
-                solution.push(m);
-                m.inVC = true;
-                for (Packing q : m.affectedConstraints) q.updateVC();
-            }
-            for (Node m : mirrors) packingList.push(new Packing(m, G, reduction));
-        }
         for (Packing q : v.affectedConstraints) q.updateVC();
         packingList.push(new Packing(v, G, reduction));
         hk.updateDeleteNodes(ll);
-        k = branch(c + 1 + mirrors.size(), k, depth + 1, lastPerm); //the returned cover
+        //recursive call over deleting the node
+        k = branch(c + 1, k, depth + 1, lastPerm);
+        //if the call was not successfull, revert the changes in the graph
         if(reduction.removedNodes != null && !reduction.removedNodes.isEmpty()){
             reduction.revertReduction();
         }
@@ -245,7 +247,8 @@ public class Branching {
             packingList.push(new Packing(n, hs, G, reduction));
             for (Packing q : n.affectedConstraints) q.updateVC();
         }
-        k = branch(c + neighbours.size(), k, depth + 1, lastPerm); //the returned cover
+        // recursive call over deleting the neighbours
+        k = branch(c + neighbours.size(), k, depth + 1, lastPerm);
         if(reduction.removedNodes != null && !reduction.removedNodes.isEmpty()){
             reduction.revertReduction();
         }
@@ -262,50 +265,15 @@ public class Branching {
         hk.updateAddNodes(neighbours);
         return k;
     }
-    private LinkedList<Node> findMirrors(Node v){
-        LinkedList<Node> mirrors = new LinkedList<>();
-        HashSet<Integer> used = new HashSet<>();
-        used.add(v.id);
-        int[] ps = new int[G.nodeArray.length];
-        Arrays.fill(ps, -2);
-        for (int u : v.neighbours) if (G.nodeArray[u].active){
-            used.add(u);
-            ps[u] = -1;
-        }
-        for (int u : v.neighbours) if (G.nodeArray[u].active){
-            for (int w : G.nodeArray[u].neighbours) if (G.nodeArray[w].active && used.add(w)){
-                int degV = v.activeNeighbours;
-                for (int z : G.nodeArray[w].neighbours) if (G.nodeArray[z].active && ps[z] != -2){
-                    ps[z] = w;
-                    degV--;
-                }
-                boolean ok = true;
-                for (int u2 : v.neighbours) if (G.nodeArray[u2].active && ps[u2] != w){
-                    int degU2 = 0;
-                    for (int w2 : G.nodeArray[u2].neighbours) if (G.nodeArray[w2].active && ps[w2] != w && ps[w2] != -2) degU2++;
-                    if (degU2 != degV - 1){
-                        ok = false;
-                        break;
-                    }
-                }
-                if (ok){
-                    //System.out.println("#mirror");
-                    mirrors.add(G.nodeArray[w]);
-                }
-            }
-        }
-        return mirrors;
-    }
 
     LinkedList<Node> returnModified(LinkedList<Node> vc, Graph oldG, Graph newG, Reduction oldRed){
         //substitutes the fake nodes of newG obtained by reducing for the real nodes of oldG
-        //vc.addAll(G.partialSolution);return vc //auskommentieren um ohne kleineren Graphen zu testen
         LinkedList<Node> r = new LinkedList<>();
         for (Node n : vc){
             r.add(oldG.nodeArray[newG.translationNewToOld[n.id]]);
         }
         r.addAll(oldRed.VCNodes);
-        //entmerge gemergete Knoten
+        //de-merge merged nodes
         bestMergedNodes =oldRed.mergedNodes;
         while (!bestMergedNodes.isEmpty()){
             int[] merge = bestMergedNodes.pop();
