@@ -17,4 +17,8 @@ The program reads a graph in the following format: Each vertex has a name. Each 
 3 5
 3 6
 
+Parameters:
 
+without any additional parameters -> input by scanner, no time limit
+one additional parameter -> input by filename, no time limit, 15s upper bound search
+two additional parameters args[1],args[2] -> input by filename args[1], trying to exactly solve for args[2] seconds, then output heuristic solution
