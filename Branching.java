@@ -15,6 +15,7 @@ public class Branching {
     LinkedList<Node> upperBound;
     int recursiveSteps;
     int firstLowerBound;
+    long totalTime;
     public Branching(Graph G){
         this.G = G;
         recursiveSteps = 0;
@@ -53,7 +54,7 @@ public class Branching {
         cc = new CliqueCover(G);
         solution = new Stack<>();
         bestMergedNodes = new Stack<>();
-        cc.cliqueCoverIterations(10, 5, null, 5);
+        cc.iterativeCliqueCover(10, 5, null, 5);
         hk.searchForAMatchingNew();
         LinkedList<Integer> bestPermutation = cc.permutation;
         int bestLowerBound = cc.lowerBound;
@@ -65,14 +66,14 @@ public class Branching {
                 int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
                 bestPermutation.remove((Integer) rand); //This seems completely useless, but it drastically improves the results
                 bestPermutation.add(rand);
-                cc.cliqueCoverIterations(10, 5, bestPermutation, 5);
+                cc.iterativeCliqueCover(10, 5, bestPermutation, 5);
                 if (cc.lowerBound < bestLowerBound){
                     int a =  bestPermutation.removeLast();
                     bestPermutation.add(rand, a);
                 }
             }
             //else, use a random permutation
-            else cc.cliqueCoverIterations(10, 5, null, 5);
+            else cc.iterativeCliqueCover(10, 5, null, 5);
             if (cc.lowerBound > bestLowerBound){
                 bestLowerBound = cc.lowerBound;
                 bestPermutation = cc.permutation;
@@ -98,13 +99,13 @@ public class Branching {
                     int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
                     bestPermutation.remove((Integer) rand);
                     bestPermutation.add(rand);
-                    cc.cliqueCoverIterations(10, 5, bestPermutation, 5);
+                    cc.iterativeCliqueCover(10, 5, bestPermutation, 5);
                     if (cc.lowerBound < bestLowerBound){
                         int a =  bestPermutation.removeLast();
                         bestPermutation.add(rand, a);
                     }
                 }
-                else cc.cliqueCoverIterations(10, 5, null, 5);
+                else cc.iterativeCliqueCover(10, 5, null, 5);
                 if (cc.lowerBound > bestLowerBound){
                     bestLowerBound = cc.lowerBound;
                     bestPermutation = cc.permutation;
@@ -145,7 +146,7 @@ public class Branching {
     public int branch(int c, int k, int depth, LinkedList<Integer> lastPerm){
         c += reduction.rollOutAllInitial(false);
         hk.searchForAMatching(); // find maximum matching in the bipartite representation of G
-        cc.cliqueCoverIterations(2,2, lastPerm, 4); // find clique cover
+        cc.iterativeCliqueCover(2,2, lastPerm, 4); // find clique cover
         int bestLowerBound = cc.lowerBound;
         if (c + bestLowerBound > k - 2 && c + bestLowerBound < k) {
             int bonus = 0;
@@ -157,7 +158,7 @@ public class Branching {
                 int rand = ThreadLocalRandom.current().nextInt(cc.permutation.size());
                 cc.permutation.remove((Integer) rand);
                 cc.permutation.add(rand);
-                cc.cliqueCoverIterations(2, 2, cc.permutation, 5);
+                cc.iterativeCliqueCover(2, 2, cc.permutation, 5);
                 if (cc.lowerBound < bestLowerBound) {
                     int a = cc.permutation.removeLast();
                     cc.permutation.add(rand, a);
