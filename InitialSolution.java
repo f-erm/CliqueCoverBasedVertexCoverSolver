@@ -22,7 +22,8 @@ public class InitialSolution {
     int[] borderIndices;
     int[][] neighbourArrays;
     long startTime;
-    public InitialSolution(Graph G, long startTime){
+    long totalTime;
+    public InitialSolution(Graph G, long startTime, long totalTime){
         this.G = G;
         neighbourArrays = new int[G.nodeArray.length][];
         for (int i = 0; i < G.nodeArray.length; i++){
@@ -35,6 +36,7 @@ public class InitialSolution {
         reduceDegOneQueue = new LinkedList<>();
         reduceDegTwoQueue = new LinkedList<>();
         this.startTime = startTime;
+        this.totalTime = totalTime;
     }
 
     /**
@@ -168,11 +170,11 @@ public class InitialSolution {
         for (int i = 0; i < G.nodeArray.length; i++) if (inVC[i]) vc.add(G.nodeArray[i]);
         for (Node n : G.nodeArray) n.neighbours = neighbourArrays[n.id];
         // --- start threading ---
-        int procCount = Runtime.getRuntime().availableProcessors();
+        int procCount = 1;//Runtime.getRuntime().availableProcessors();
         ThreadPoolExecutor exec = (ThreadPoolExecutor) Executors.newFixedThreadPool(procCount);//create threadpool based on available cores.
         Future<LinkedList<Node>>[] allResults = new Future[procCount];
         for (int i = 0; i < allResults.length; i++){
-            allResults[i] = exec.submit(new HeuristicWorker((Graph) G.clone(), startTime, inVC.clone()));
+            allResults[i] = exec.submit(new HeuristicWorker((Graph) G.clone(), startTime, totalTime, inVC.clone()));
         }
         try {
             vc = allResults[0].get();

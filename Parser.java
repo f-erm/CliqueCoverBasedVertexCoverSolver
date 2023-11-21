@@ -30,8 +30,7 @@ public class Parser {
         Graph g = new Graph();
         Scanner scanner = new Scanner(System.in);
         String line;
-        while (scanner.hasNext()){
-            line = scanner.nextLine();
+        while (scanner.hasNext() && ! (line = scanner.nextLine()).equals("END_OF_INPUT")){
             if (line.contains("#")) line = line.substring(0,line.indexOf('#'));
             if (line.contains("p")) line = line.substring(0,line.indexOf('p'));
             if (line.trim().length() == 0) continue;

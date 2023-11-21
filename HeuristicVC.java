@@ -3,7 +3,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class HeuristicVC {
     Graph G;
-    final int TIME_LIMIT = 300000000; // in microseconds
+    long TIME_LIMIT = 30000000; // in microseconds
     Node[] lsPermutation;
     int[] posInLsPermutation;
     boolean[] isCandidate;
@@ -291,7 +291,7 @@ public class HeuristicVC {
     private void fourImprovements(){
         LinkedList<Integer> candidatesToAdd = new LinkedList<>();
         for (Node u : lsPermutation) {//look for 4-improvements
-            if ((System.nanoTime() - startTime)/1024 > 55500000) return;
+            if ((System.nanoTime() - startTime)/1024 > TIME_LIMIT) return;
             if (u.activeNeighbours == u.neighbours.length - 3) {
                 LinkedList<Integer> preCandidates = new LinkedList<>();
                 Node x = null, y = null, z = null;

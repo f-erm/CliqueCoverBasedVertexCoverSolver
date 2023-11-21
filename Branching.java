@@ -3,10 +3,12 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Stack;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeoutException;
 
 
 public class Branching {
     Graph G;
+    long startTime;
     HopcroftKarp hk;
     Reduction reduction;
     CliqueCover cc;
@@ -16,10 +18,16 @@ public class Branching {
     int recursiveSteps;
     int firstLowerBound;
     long totalTime;
-    public Branching(Graph G){
+    boolean timeLimit;
+    long upperBoundTime;
+    public Branching(Graph G, long startTime){
         this.G = G;
         recursiveSteps = 0;
         hk = new HopcroftKarp(G);
+        this.startTime = startTime;
+        this.totalTime = Long.MAX_VALUE; // infinite time
+        this.timeLimit = false;
+        this.upperBoundTime = -1; // init value
     }
 
     /**
@@ -27,6 +35,9 @@ public class Branching {
      * @return the smallest vertex cover in G.
      */
     public LinkedList<Node> solve(){
+        if (upperBoundTime == -1) upperBoundTime = Math.min(totalTime / 2, 30000000);
+        // spend half of the time on upper bound search and half
+        // of the time on branching, but not more than 30s on upper bound.
         reduction = new Reduction(G, hk);
         reduction.rollOutAllInitial(true);
         if (G.activeNodes <= 0){
@@ -47,9 +58,9 @@ public class Branching {
         Reduction oldReduction = reduction;
         hk = new HopcroftKarp(G);
         reduction = new Reduction(G, hk);
-
         //calculate initial upper bound
-        InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime());
+        System.out.println("# start computing bounds");
+        InitialSolution initialSolution = new InitialSolution((Graph) G.clone(), System.nanoTime(), upperBoundTime);
         upperBound = initialSolution.vc(true);
         cc = new CliqueCover(G);
         solution = new Stack<>();
@@ -60,7 +71,7 @@ public class Branching {
         int bestLowerBound = cc.lowerBound;
         long time = System.nanoTime();
         //compute initial clique cover
-        for (int i = 0; i < G.activeNodes * 200 && (System.nanoTime() - time)/1024 < 10000000; i++){
+        for (int i = 0; i < G.activeNodes * 200 && (System.nanoTime() - time)/1024 < Math.min(10000000, upperBoundTime / 4); i++){
             if (i % 2 == 1){
                 //in every second step, do clique cover local search
                 int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
@@ -86,15 +97,15 @@ public class Branching {
         if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
         if (upperBound.size() - firstLowerBound < 3){ //we are really close, try to get even better bounds
             for (int i = 0; i < 4; i++) {//try to improve upper bound
-                InitialSolution is = new InitialSolution((Graph) G.clone(), System.nanoTime());
+                InitialSolution is = new InitialSolution((Graph) G.clone(), System.nanoTime(), upperBoundTime);
                 LinkedList<Node> newUpperBound = is.vc(i % 2 == 0);
                 if (newUpperBound.size() < upperBound.size()){
                     upperBound = newUpperBound;
-                    System.out.println("# upper bound - try better: " + (upperBound.size() + oldReduction.VCNodes.size()));
+                    System.out.println("# bounds were close - possibly improved upper bound: " + (upperBound.size() + oldReduction.VCNodes.size()));
                     if (upperBound.size() == firstLowerBound) return returnModified(upperBound, OldG, G, oldReduction);
                 }
             }
-            for (int i = 0; i < G.activeNodes * 20000 && (System.nanoTime() - time)/1024 < 50000000; i++){
+            for (int i = 0; i < G.activeNodes * 20000 && (System.nanoTime() - time)/1024 < Math.min(50000000, upperBoundTime / 2); i++){
                 if (i % 2 == 1){//try to improve lower bound
                     int rand = ThreadLocalRandom.current().nextInt(bestPermutation.size());
                     bestPermutation.remove((Integer) rand);
@@ -110,7 +121,7 @@ public class Branching {
                     bestLowerBound = cc.lowerBound;
                     bestPermutation = cc.permutation;
                     if (upperBound.size() - bestLowerBound == 1){
-                        System.out.println("# lower bound - try better (not perfect yet): " + (bestLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
+                        System.out.println("# bounds were close - possibly improved lower bound: " + (bestLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
                         time = System.nanoTime();
                         i = 0;
                     }
@@ -118,12 +129,18 @@ public class Branching {
                 }
             }
             firstLowerBound = Math.max(hk.totalCycleLB, bestLowerBound);
-            System.out.println("# lower bound - try better: " + (firstLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
+            System.out.println("# bounds were close - possibly improved lower bound: " + (firstLowerBound + reduction.VCNodes.size() + G.partialSolution.size() + oldReduction.VCNodes.size()));
             if (firstLowerBound == upperBound.size()) return returnModified(upperBound, OldG, G, oldReduction);
         }
         recursiveSteps++;
         //  --- start of main branching function ---
-        branch(G.partialSolution.size() + reduction.VCNodes.size(), upperBound.size(), 0, bestPermutation);
+        System.out.println("# start branching");
+        try{
+            branch(G.partialSolution.size() + reduction.VCNodes.size(), upperBound.size(), 0, bestPermutation);
+        }
+        catch (TimeoutException e){
+            System.out.println("# Timeout: Printing an upper bound:");
+        }
         //  --- end of main branching function ---
 
         while (!bestMergedNodes.isEmpty()){ //de-merge degree-2-reductions
@@ -143,7 +160,10 @@ public class Branching {
      * @param lastPerm best known permutation of nodes which is then usedused to compute the clique cover
      * @return size of the vertex cover. The solution is stored in _____
      */
-    public int branch(int c, int k, int depth, LinkedList<Integer> lastPerm){
+    public int branch(int c, int k, int depth, LinkedList<Integer> lastPerm) throws TimeoutException {
+        if (timeLimit && System.nanoTime() - startTime > totalTime * 1024){
+            throw new TimeoutException();
+        }
         c += reduction.rollOutAllInitial(false);
         hk.searchForAMatching(); // find maximum matching in the bipartite representation of G
         cc.iterativeCliqueCover(2,2, lastPerm, 4); // find clique cover
