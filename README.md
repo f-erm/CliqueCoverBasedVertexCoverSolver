@@ -1,4 +1,4 @@
-# DemAlgoIngenieurIstNichtsZuSchwieur
+# Clique Cover based Vertex Cover Solver
 
 
 This is an exact solver for the NP-complete Vertex Cover problem. It achieves results close to competition-winning solvers as "WeGotYouCovered" from the PACE challenge, solving three additional graphs from their set of instances.</br></br>
